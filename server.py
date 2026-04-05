@@ -20,12 +20,20 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Add src to path for module resolution
+# Add src to path for development/workspace mode (sys.path modifications are runtime-only)
 sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent / "packages" / "core" / "src"))
+sys.path.insert(0, str(Path(__file__).parent / "packages" / "hardware-monitor" / "src"))
+sys.path.insert(0, str(Path(__file__).parent / "packages" / "spotify" / "src"))
 
-from jarvis_skills import MCPServer
-from jarvis_skills.models import MCPRequest, MCPResponse
-from jarvis_skills.tools import register_all_tools
+try:
+    from jarvis_skills_core import MCPServer, MCPRequest  # type: ignore[import-not-found]
+    from jarvis_skills import register_all_tools  # type: ignore[import-not-found]
+except ImportError as e:
+    raise RuntimeError(
+        "Failed to import JARVIS skills modules. "
+        "Install dependencies: uv sync"
+    ) from e
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,7 +49,8 @@ async def lifespan(app: FastAPI):
     global mcp_server
     mcp_server = MCPServer(name="jarvis-skills")
     register_all_tools(mcp_server)
-    logger.info(f"Registered {len(mcp_server.list_tools())} tools")
+    if mcp_server:
+        logger.info(f"Registered {len(mcp_server.list_tools())} tools")
     yield
     logger.info("Shutting down MCP server")
 
@@ -64,14 +73,14 @@ app.add_middleware(
 
 class ToolCallRequest(BaseModel):
     name: str
-    arguments: dict[str, Any] = {}
+    arguments: dict[str, Any] = {}  # Pydantic handles mutable defaults safely
 
 
 class JSONRPCRequest(BaseModel):
     jsonrpc: str = "2.0"
     id: str
     method: str
-    params: dict[str, Any] = {}
+    params: dict[str, Any] = {}  # Pydantic handles mutable defaults safely
 
 
 class JSONRPCResponse(BaseModel):
@@ -90,18 +99,24 @@ async def health_check():
 @app.get("/tools")
 async def list_tools():
     """List all available tools."""
-    return {"tools": mcp_server.list_tools()}
+    if mcp_server:
+        return {"tools": mcp_server.list_tools()}
+    return {"tools": []}
 
 
 @app.post("/tools/{tool_name}")
-async def execute_tool(tool_name: str, request: dict[str, Any] = {}):
+async def execute_tool(tool_name: str, request: dict[str, Any] | None = None) -> dict[str, Any]:
     """Execute a tool by name with arguments."""
-    result = await mcp_server.execute_tool(tool_name, **request)
-    
-    if result.success:
-        return result.result
-    else:
-        raise HTTPException(status_code=400, detail=result.error)
+    if request is None:
+        request = {}
+    if mcp_server:
+        result = await mcp_server.execute_tool(tool_name, **request)
+        
+        if result.success:
+            return result.result
+        else:
+            raise HTTPException(status_code=400, detail=result.error)
+    raise HTTPException(status_code=503, detail="MCP server not ready")
 
 
 @app.post("/jsonrpc")
@@ -113,6 +128,12 @@ async def jsonrpc_endpoint(request: JSONRPCRequest) -> JSONRPCResponse:
         - tools/list: List available tools
         - tools/call: Execute a tool
     """
+    if not mcp_server:
+        return JSONRPCResponse(
+            id=request.id,
+            error={"code": -32603, "message": "Internal error: MCP server not initialized"},
+        )
+    
     mcp_request = MCPRequest(
         id=request.id,
         method=request.method,
