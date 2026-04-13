@@ -22,7 +22,7 @@ class ToolParameter(BaseModel):
     description: str
     required: bool = False
     default: Optional[Any] = None
-    enum: Optional[list[str]] = None
+    enum: Optional[list[str]] = Field(default=None)
 
 
 class ToolDefinition(BaseModel):
@@ -36,11 +36,11 @@ class ToolDefinition(BaseModel):
     
     def to_openai_format(self) -> dict:
         """Convert to OpenAI function calling format."""
-        properties = {}
-        required = []
+        properties: dict[str, dict[str, Any]] = {}
+        required: list[str] = []
         
         for param in self.parameters:
-            prop = {
+            prop: dict[str, Any] = {
                 "type": param.type.value,
                 "description": param.description,
             }

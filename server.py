@@ -5,12 +5,15 @@ Provides a FastAPI-based HTTP server that exposes MCP tools via JSON-RPC.
 This avoids STDOUT noise issues that come with stdio-based transports.
 
 Usage:
-    uv run server.py                    # Start server on port 5050
+    uv run server.py                    # Start Granian server on port 5050
     uv run server.py --port 8080        # Custom port
 """
 
 import argparse
 import logging
+import shutil
+import socket
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -78,14 +81,14 @@ class ToolCallRequest(BaseModel):
 
 class JSONRPCRequest(BaseModel):
     jsonrpc: str = "2.0"
-    id: str
+    id: str | int
     method: str
     params: dict[str, Any] = {}  # Pydantic handles mutable defaults safely
 
 
 class JSONRPCResponse(BaseModel):
     jsonrpc: str = "2.0"
-    id: str
+    id: str | int
     result: Any = None
     error: dict | None = None
 
@@ -104,16 +107,37 @@ async def list_tools():
     return {"tools": []}
 
 
+@app.post("/tools/call")
+async def execute_tool_by_name(request: dict[str, Any]) -> dict[str, Any]:
+    """Execute a tool by name from request body."""
+    if mcp_server:
+        tool_name = request.get("name")
+        arguments = request.get("arguments", {})
+        
+        if not tool_name:
+            raise HTTPException(status_code=400, detail="Missing tool name")
+        
+        result = await mcp_server.execute_tool(tool_name, **arguments)
+        
+        if result.success:
+            return {"result": result.result}
+        else:
+            raise HTTPException(status_code=400, detail=result.error)
+    raise HTTPException(status_code=503, detail="MCP server not ready")
+
+
 @app.post("/tools/{tool_name}")
 async def execute_tool(tool_name: str, request: dict[str, Any] | None = None) -> dict[str, Any]:
     """Execute a tool by name with arguments."""
     if request is None:
         request = {}
     if mcp_server:
-        result = await mcp_server.execute_tool(tool_name, **request)
+        # Extract arguments from request, not the whole request dict
+        arguments = request.get("arguments", {})
+        result = await mcp_server.execute_tool(tool_name, **arguments)
         
         if result.success:
-            return result.result
+            return {"result": result.result}
         else:
             raise HTTPException(status_code=400, detail=result.error)
     raise HTTPException(status_code=503, detail="MCP server not ready")
@@ -135,7 +159,7 @@ async def jsonrpc_endpoint(request: JSONRPCRequest) -> JSONRPCResponse:
         )
     
     mcp_request = MCPRequest(
-        id=request.id,
+        id=str(request.id),
         method=request.method,
         params=request.params,
     )
@@ -150,23 +174,68 @@ async def jsonrpc_endpoint(request: JSONRPCRequest) -> JSONRPCResponse:
 
 
 def main():
-    import uvicorn
-    
     parser = argparse.ArgumentParser(description="JARVIS Skills MCP Server")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=5050, help="Port to bind to")
-    parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload (requires granian[reload])",
+    )
     
     args = parser.parse_args()
-    
-    logger.info(f"Starting JARVIS Skills MCP Server on {args.host}:{args.port}")
-    
-    uvicorn.run(
-        "server:app",
-        host=args.host,
-        port=args.port,
-        reload=args.reload,
+
+    # Detect occupied host/port before launching the runtime to provide clear guidance.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind((args.host, args.port))
+        except OSError:
+            logger.error(
+                "Port %s is already in use on %s. Cannot start MCP server.",
+                args.port,
+                args.host,
+            )
+            print(
+                (
+                    f"Port {args.port} on {args.host} is already in use.\n"
+                    "Check listener PID:\n"
+                    f"  Get-NetTCPConnection -LocalPort {args.port} -State Listen\n"
+                    "Stop exact process by PID:\n"
+                    "  Stop-Process -Id <PID>\n"
+                ),
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    logger.info(
+        "Starting JARVIS Skills MCP Server with Granian on %s:%s",
+        args.host,
+        args.port,
     )
+
+    uv_executable = shutil.which("uv")
+    if uv_executable:
+        command = [uv_executable, "run", "granian"]
+    else:
+        command = [sys.executable, "-m", "granian"]
+
+    command.extend(
+        [
+            "--interface",
+            "asgi",
+            "--host",
+            args.host,
+            "--port",
+            str(args.port),
+        ]
+    )
+    if args.reload:
+        command.append("--reload")
+    command.append("server:app")
+
+    result = subprocess.run(command, check=False)
+    if result.returncode != 0:
+        sys.exit(result.returncode)
 
 
 if __name__ == "__main__":

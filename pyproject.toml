@@ -19,9 +19,12 @@ classifiers = [
 
 dependencies = [
     "fastapi>=0.109.0",
+    "granian[reload]>=2.5.0",
+    "jarvis-skills-core>=0.1.0",
+    "jarvis-skills-hardware-monitor>=0.1.0",
+    "jarvis-skills-spotify>=0.1.0",
     "pydantic>=2.6.0",
     "python-dotenv>=1.0.0",
-    "uvicorn>=0.27.0",
 ]
 
 [project.optional-dependencies]
@@ -38,21 +41,6 @@ all = [
     "comtypes>=1.4.0",
     "spotipy>=2.23.0",
 ]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.24.0",
-]
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

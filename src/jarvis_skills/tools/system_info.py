@@ -4,7 +4,7 @@ System Info Tool - Provides system resource information.
 
 import psutil
 from typing import Optional
-from jarvis_skills.models import ToolParameter, ToolParameterType
+from jarvis_skills_core import ToolParameter, ToolParameterType
 
 
 def get_system_info(include: Optional[list[str]] = None) -> dict:

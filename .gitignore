@@ -12,3 +12,9 @@ wheels/
 # Environment variables
 .env
 .env.local
+
+# Downloaded tools (auto-cached)
+.tools_cache/
+
+# Cache files (tokens, credentials)
+.cache

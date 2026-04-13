@@ -10,8 +10,15 @@ Usage:
 import sys
 import json
 import argparse
+from pathlib import Path
+from dotenv import load_dotenv
 from jarvis_skills import MCPServer
 from jarvis_skills.tools import register_all_tools
+
+# Load .env file from current directory
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
 
 
 def create_server() -> MCPServer:

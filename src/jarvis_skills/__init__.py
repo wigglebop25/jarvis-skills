@@ -14,7 +14,7 @@ Usage:
     
     # Execute tools
     result = server.execute_tool_sync("get_system_info")
-    print(result.result)
+    # result.result contains the tool output
 """
 
 # Re-export from core
@@ -30,17 +30,20 @@ from jarvis_skills_core import (
     MCPResponse,
 )
 
-# Import tool registration functions
-from jarvis_skills_hardware_monitor import (
-    register_all_tools as register_hardware_tools,
-    get_system_info,
-    control_volume,
-    toggle_network,
+# Import built-in tools and registration helpers
+from .tools import (
+    register_all_tools as register_builtin_tools,
+    register_system_info_tool,
+    register_volume_tool,
+    register_spotify_tool as register_spotify_tool_local,
+    register_network_tool,
+    register_folder_organizer_tool,
 )
-from jarvis_skills_spotify import (
-    register_spotify_tool,
-    control_spotify,
-)
+from .tools.system_info import get_system_info
+from .tools.volume import control_volume
+from .tools.spotify import control_spotify
+from .tools.network import toggle_network
+from .tools.folder_organizer import organize_folder
 
 # Keep legacy imports for backward compatibility
 from .server import MCPServer as LegacyMCPServer
@@ -68,9 +71,8 @@ def create_server(name: str = "jarvis-skills") -> MCPServer:
     """
     server = MCPServer(name=name)
     
-    # Register all tools
-    register_hardware_tools(server)
-    register_spotify_tool(server)
+    # Register all tools from the current built-in tools path
+    register_builtin_tools(server)
     
     return server
 
@@ -82,8 +84,23 @@ def register_all_tools(server: MCPServer) -> None:
     Args:
         server: MCPServer instance to register tools with
     """
-    register_hardware_tools(server)
-    register_spotify_tool(server)
+    register_builtin_tools(server)
+
+
+def register_hardware_tools(server: MCPServer) -> None:
+    """
+    Backward-compatible helper for hardware-related tools only.
+    """
+    register_system_info_tool(server)
+    register_volume_tool(server)
+    register_network_tool(server)
+
+
+def register_spotify_tool(server: MCPServer) -> None:
+    """
+    Backward-compatible helper for Spotify tool registration.
+    """
+    register_spotify_tool_local(server)
 
 
 __all__ = [
@@ -107,8 +124,11 @@ __all__ = [
     "control_volume",
     "toggle_network",
     "control_spotify",
+    "organize_folder",
     
     # Registration functions
+    "register_builtin_tools",
     "register_hardware_tools",
     "register_spotify_tool",
+    "register_folder_organizer_tool",
 ]
