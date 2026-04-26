@@ -1,3 +1,4 @@
+mod intent;
 mod tools;
 
 use std::{env, net::SocketAddr};
@@ -158,6 +159,43 @@ async fn handle_jsonrpc(payload: &Value, state: &AppState, mode: RpcMode) -> Val
                 },
                 None => jsonrpc_error(id, -32602, "Missing tool name"),
             }
+        }
+        "jarvis/route" => {
+            let text = params.get("text").and_then(Value::as_str).unwrap_or("");
+            let decision = intent::route_intent(text);
+            jsonrpc_success(id, json!({
+                "intent": decision.intent,
+                "confidence": decision.confidence,
+                "tool_name": decision.tool_name,
+                "arguments": decision.arguments,
+                "should_execute": decision.should_execute,
+            }))
+        }
+        "jarvis/route_and_call" => {
+            let text = params.get("text").and_then(Value::as_str).unwrap_or("");
+            let decision = intent::route_intent(text);
+            let mut result = json!({
+                "intent": decision.intent,
+                "confidence": decision.confidence,
+                "tool_name": decision.tool_name,
+                "arguments": decision.arguments,
+                "should_execute": decision.should_execute,
+            });
+
+            if decision.should_execute {
+                if let Some(ref tool_name) = decision.tool_name {
+                    match tools::execute_tool(tool_name, decision.arguments.clone(), state).await {
+                        Ok(res) => {
+                            result["execution_result"] = res;
+                        }
+                        Err(err) => {
+                            result["execution_error"] = json!(err);
+                        }
+                    }
+                }
+            }
+
+            jsonrpc_success(id, result)
         }
         _ => {
             warn!("Unknown JSON-RPC method received: {method}");
