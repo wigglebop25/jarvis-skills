@@ -131,7 +131,10 @@ fn ensure_allowed_listing_root(path: &Path) -> Result<(), String> {
 }
 
 fn listing_allowed_roots() -> Result<Vec<PathBuf>, String> {
-    if let Ok(v) = env::var("JARVIS_SKILLS_LIST_ALLOWED_ROOTS") {
+    let env_val = env::var("JARVIS_SKILLS_LIST_ALLOWED_ROOTS")
+        .or_else(|_| env::var("JARVIS_SKILLS_ALLOWED_ROOTS"));
+
+    if let Ok(v) = env_val {
         let mut roots = Vec::new();
         for part in v.split(';') {
             let p = part.trim();
