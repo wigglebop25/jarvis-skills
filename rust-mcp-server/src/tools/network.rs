@@ -31,14 +31,17 @@ pub fn toggle_network(args: &Map<String, Value>) -> Result<Value, String> {
                 match run_command("powershell", &["-NoProfile", "-Command", &script]) {
                     Ok(_) => {}
                     Err(err) => {
-                        let lowered = err.to_ascii_lowercase();
+                        let normalized = normalize_bluetooth_toggle_error(&err);
+                        let lowered = normalized.to_ascii_lowercase();
                         let needs_elevation =
-                            lowered.contains("generic failure") || lowered.contains("access is denied");
+                            lowered.contains("generic failure")
+                                || lowered.contains("access is denied")
+                                || lowered.contains("pnputil exit code 50");
                         if needs_elevation {
                             // Retry once via UAC elevation for environments where device toggles
                             // require an administrator token.
                             let elevated = elevated_bluetooth_toggle_script(ps_action, pnp_action, enable);
-                            run_command(
+                            if let Err(elevated_err) = run_command(
                                 "powershell",
                                 &[
                                     "-NoProfile",
@@ -47,9 +50,11 @@ pub fn toggle_network(args: &Map<String, Value>) -> Result<Value, String> {
                                     "-Command",
                                     &elevated,
                                 ],
-                            )?;
+                            ) {
+                                return Err(normalize_bluetooth_toggle_error(&elevated_err));
+                            }
                         } else {
-                            return Err(err);
+                            return Err(normalized);
                         }
                     }
                 }
@@ -156,4 +161,18 @@ fn elevated_bluetooth_toggle_script(ps_action: &str, pnp_action: &str, enable: b
            if ($p.ExitCode -ne 0) {{ throw ('Elevated bluetooth toggle failed with exit code ' + $p.ExitCode) }} \
          }} finally {{ Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue }}"
     )
+}
+
+#[cfg(target_os = "windows")]
+fn normalize_bluetooth_toggle_error(err: &str) -> String {
+    let lowered = err.to_ascii_lowercase();
+    if lowered.contains("pnputil exit code 50") || lowered.contains("request is not supported") {
+        return "Bluetooth adapter does not support software power toggle on this driver (pnputil exit code 50). Use Windows Settings toggle or unplug the Bluetooth dongle.".to_string();
+    }
+    if lowered.contains("access is denied") || lowered.contains("generic failure") {
+        return format!(
+            "{err}\nBluetooth toggle likely requires Administrator privileges on this system."
+        );
+    }
+    err.to_string()
 }
