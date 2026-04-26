@@ -1,75 +1,74 @@
 # JARVIS Skills
 
-Modular MCP server for system control and automation.
+Rust MCP server for JARVIS hardware and system tools.
 
-## Packages
+## Architecture
 
-- **jarvis-skills-core**: MCP infrastructure
-- **jarvis-skills-hardware-monitor**: System info, volume, network
-- **jarvis-skills-spotify**: Spotify playback control
-- **Built-in folder organizer**: Safe file organization in allowlisted paths
+- **Runtime:** Rust (`tokio` + `axum`)
+- **Transport:** HTTP JSON-RPC (`/jsonrpc`) and stdio (`--stdio`)
+- **Default bind:** `127.0.0.1:5050`
+- **Tool catalog:** returned by `tools/list`, consumed by `jarvis-chat`
 
-## Installation
-
-```bash
-cd jarvis-skills
-uv sync
-```
-
-Or install individual packages:
+## Setup
 
 ```bash
-uv pip install jarvis-skills-core
-uv pip install jarvis-skills-hardware-monitor
-uv pip install jarvis-skills-spotify
+cd jarvis-skills\rust-mcp-server
+cargo build --release
 ```
 
-## Quick Start
+## Run
 
-```python
-from jarvis_skills import create_server
-
-# Create server with all tools
-server = create_server()
-
-# Execute tools
-result = server.execute_tool_sync("get_system_info")
-print(result.result)
-
-result = server.execute_tool_sync("control_volume", action="get")
-print(result.result)
-
-result = server.execute_tool_sync(
-    "organize_folder",
-    path="C:/Users/YourUser/Downloads",
-    strategy="extension",
-    dry_run=True,
-)
-print(result.result)
-```
-
-## HTTP Server
+HTTP mode:
 
 ```bash
-uv run server.py
-# Server runs on http://127.0.0.1:5050
+cargo run --release
 ```
 
-`server.py` uses **Granian** as the ASGI runtime.
+stdio mode (for MCP clients):
 
-## Folder organizer safety scope
-
-`organize_folder` is allowlist-scoped and non-destructive by default.
-
-- Default writable roots: `Desktop`, `Downloads`, `Documents`
-- Override roots with environment variable:
-
-```env
-JARVIS_SKILLS_ALLOWED_ROOTS=C:\Users\you\Desktop;C:\Users\you\Downloads
+```bash
+.\target\release\jarvis-rust-mcp-server.exe --stdio
 ```
 
-- `dry_run=true` previews moves without changing files
+## Verify implementation
 
-## License
+Health:
 
-MIT
+```bash
+curl http://127.0.0.1:5050/health
+```
+
+Tool list:
+
+```bash
+curl http://127.0.0.1:5050/tools
+```
+
+JSON-RPC tools/list:
+
+```bash
+curl -X POST http://127.0.0.1:5050/jsonrpc ^
+  -H "Content-Type: application/json" ^
+  -d "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"tools/list\",\"params\":{}}"
+```
+
+## MCP client configuration
+
+This repo includes:
+
+- `mcp.json`
+- `.mcp.json`
+
+Both are configured for stdio launch of `jarvis-rust-mcp-server.exe`.
+
+## Troubleshooting
+
+- **Cannot connect to port 5050:** confirm no stale process holds the port and restart server.
+- **Bluetooth toggle failures:** Windows may require elevated privileges for PnP operations.
+- **Spotify commands fail:** set `SPOTIPY_CLIENT_ID`, `SPOTIPY_CLIENT_SECRET`, `SPOTIPY_REDIRECT_URI`.
+
+## Safety
+
+- No delete tools are exposed.
+- `list_directory` is read-only.
+- `organize_folder` is non-destructive and supports dry-run planning.

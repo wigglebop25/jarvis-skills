@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "jarvis-skills": {
+      "type": "local",
+      "command": ".\\rust-mcp-server\\target\\release\\jarvis-rust-mcp-server.exe",
+      "args": [
+        "--stdio"
+      ],
+      "tools": [
+        "*"
+      ]
+    }
+  }
+}

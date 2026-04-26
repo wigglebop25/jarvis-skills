@@ -45,16 +45,7 @@ from .tools.spotify import control_spotify
 from .tools.network import toggle_network
 from .tools.folder_organizer import organize_folder
 
-# Keep legacy imports for backward compatibility
-from .server import MCPServer as LegacyMCPServer
-from .registry import ToolRegistry as LegacyToolRegistry
-from .models import (
-    ToolDefinition as LegacyToolDefinition,
-    ToolCall as LegacyToolCall,
-    ToolResult as LegacyToolResult,
-    MCPRequest as LegacyMCPRequest,
-    MCPResponse as LegacyMCPResponse,
-)
+
 
 __version__ = "0.2.0"
 

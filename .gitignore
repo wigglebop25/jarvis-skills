@@ -1,20 +1,41 @@
 # Python-generated files
 __pycache__/
-*.py[oc]
+*.pyc
+*.pyo
+*.egg-info/
 build/
 dist/
-wheels/
-*.egg-info
 
 # Virtual environments
 .venv
 
 # Environment variables
 .env
-.env.local
 
-# Downloaded tools (auto-cached)
-.tools_cache/
-
-# Cache files (tokens, credentials)
+# Cache files
 .cache
+
+# Tool/download caches
+.tools_cache/
+src/.tools_cache/
+
+# Editor metadata
+.vscode/
+
+# Runtime logs
+*.log
+*.out.log
+*.err.log
+
+# Rust build artifacts
+rust-mcp-server/target/
+rust-mcp-server/target_alt*/
+rust-mcp-server/target_alt2/
+rust-mcp-server/target_alt3/
+rust-mcp-server/target*/
+**/target/
+
+# Local CLI state
+.gemini/
+.copilot/
+

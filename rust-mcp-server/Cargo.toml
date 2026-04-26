@@ -1,0 +1,25 @@
+[package]
+name = "jarvis-rust-mcp-server"
+version = "0.1.0"
+edition = "2021"
+description = "MCP server that handles system control and hardware integration for JARVIS"
+
+[dependencies]
+axum = { version = "0.8", features = ["json"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+dirs = "6"
+regex = "1.12.3"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sysinfo = "0.37"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+walkdir = "2"
+which = "8"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

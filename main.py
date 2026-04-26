@@ -1,10 +1,13 @@
-"""
-JARVIS Skills - MCP Server CLI
+r"""
+JARVIS Skills - Legacy Python MCP utility
 
 Usage:
-    uv run main.py                     # Interactive mode
-    uv run main.py --list              # List available tools
-    uv run main.py --tool TOOL [ARGS]  # Execute a specific tool
+    uv run main.py                     # Interactive mode (legacy)
+    uv run main.py --list              # List available tools (legacy)
+    uv run main.py --tool TOOL [ARGS]  # Execute a specific tool (legacy)
+
+Production MCP runtime uses Rust:
+    .\\rust-mcp-server\\target\\release\\jarvis-rust-mcp-server.exe --stdio
 """
 
 import sys
