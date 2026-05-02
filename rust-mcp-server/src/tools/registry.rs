@@ -1,7 +1,20 @@
 use serde_json::{json, Value};
 
+use super::registry_spotify;
+
 pub fn tool_definitions() -> Vec<Value> {
-    vec![
+    let mut tools = vec![
+        tool(
+            "resolve_path",
+            "Resolve user-friendly path names to full system paths. Use this FIRST when user mentions downloads, documents, etc.",
+            json!({
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "enum": ["downloads","documents","desktop","home","project"], "description": "User-friendly name to resolve"}
+                },
+                "required": ["name"]
+            }),
+        ),
         tool(
             "get_system_info",
             "Get system information including CPU usage, RAM, storage, and network status",
@@ -23,25 +36,17 @@ pub fn tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "action": {"type": "string", "enum": ["get","set","up","down","mute","unmute"]},
-                    "level": {"type": "integer", "minimum": 0, "maximum": 100},
-                    "step": {"type": "integer", "minimum": 1, "maximum": 100}
+                    "level": {"type": "integer"},
+                    "step": {"type": "integer"}
                 },
                 "required": ["action"]
             }),
         ),
-        tool(
-            "control_spotify",
-            "Control Spotify/music playback (play, pause, next, previous, current, search)",
-            json!({
-                "type": "object",
-                "properties": {
-                    "action": {"type": "string", "enum": ["play","pause","next","previous","current","search"]},
-                    "uri": {"type": "string"},
-                    "query": {"type": "string"}
-                },
-                "required": ["action"]
-            }),
-        ),
+    ];
+
+    tools.extend(registry_spotify::spotify_tool_definitions());
+
+    tools.extend(vec![
         tool(
             "toggle_network",
             "Toggle network interfaces (WiFi, Bluetooth, Ethernet) on/off",
@@ -76,7 +81,7 @@ pub fn tool_definitions() -> Vec<Value> {
                 "properties": {
                     "path": {"type": "string"},
                     "include_hidden": {"type": "boolean"},
-                    "max_entries": {"type": "integer", "minimum": 1, "maximum": 2000},
+                    "max_entries": {"type": "integer"},
                     "directories_only": {"type": "boolean"},
                     "files_only": {"type": "boolean"}
                 },
@@ -99,7 +104,9 @@ pub fn tool_definitions() -> Vec<Value> {
                 "required": ["path"]
             }),
         ),
-    ]
+    ]);
+
+    tools
 }
 
 pub fn mcp_tool_definitions() -> Vec<Value> {
