@@ -63,22 +63,7 @@ pub fn toggle_network(args: &Map<String, Value>) -> Result<Value, String> {
             _ => Err(format!("Unsupported interface: {interface}")),
         }
     }
-    #[cfg(target_os = "macos")]
-    {
-        let power = if enable { "on" } else { "off" };
-        match interface {
-            "wifi" => {
-                let _ = run_command("networksetup", &["-setairportpower", "en0", power])?;
-                Ok(json!({"interface":"wifi","enabled":enable}))
-            }
-            "bluetooth" => {
-                let _ = run_command("blueutil", &["--power", if enable { "1" } else { "0" }])?;
-                Ok(json!({"interface":"bluetooth","enabled":enable}))
-            }
-            _ => Err(format!("Unsupported interface: {interface}")),
-        }
-    }
-    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    #[cfg(not(target_os = "windows"))]
     {
         let power = if enable { "on" } else { "off" };
         match interface {
