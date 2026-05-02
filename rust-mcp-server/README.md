@@ -46,15 +46,27 @@ Default bind:
 
 ## Implemented tools
 
-- `get_system_info`
-- `control_volume`
-- `control_spotify`
-- `toggle_network`
-- `list_directory`
-- `organize_folder`
+### System & Hardware
+- `get_system_info`: Get CPU, RAM, storage, and network status.
+- `control_volume`: Control system audio volume (get, set, up, down, mute, unmute).
+- `toggle_network`: Toggle network interfaces (WiFi, Bluetooth, Ethernet).
+- `control_bluetooth_device`: List, connect, or disconnect Bluetooth devices.
+
+### File System
+- `resolve_path`: Resolve user-friendly path names (downloads, documents, etc.).
+- `list_directory`: List directory contents with allowlist security.
+- `organize_folder`: Organize files by extension, type, or date.
+
+### Spotify (Full Integration)
+- **Auth:** `authorizeSpotify`, `checkSpotifyAuth`.
+- **Playback:** `playMusic`, `pausePlayback`, `resumePlayback`, `skipToNext`, `skipToPrevious`, `setVolume`, `adjustVolume`, `addToQueue`.
+- **Information:** `getNowPlaying`, `getRecentlyPlayed`, `getQueue`, `getAvailableDevices`, `searchSpotify`.
+- **Library & Playlists:** `getMyPlaylists`, `getPlaylistTracks`, `getPlaylist`, `getUsersSavedTracks`, `getAlbumTracks`, `getAlbums`, `checkUsersSavedAlbums`, `createPlaylist`, `addTracksToPlaylist`, `updatePlaylist`, `removeTracksFromPlaylist`, `reorderPlaylistItems`, `saveOrRemoveAlbumForUser`, `removeUsersSavedTracks`.
 
 ## Notes
 
-- Windows media controls use `nircmd`; if missing, the server attempts automatic download/install into a local cache.
-- Linux volume and media controls require OS tools (for example: `pactl`, `playerctl`, `nmcli`, `rfkill`) to be installed and in `PATH`.
-- `list_directory` allowlist can be overridden with `JARVIS_SKILLS_LIST_ALLOWED_ROOTS` (semicolon-separated paths).
+- **Windows Volume Control:** Uses the native `windows` crate (Core Audio APIs) for high-performance, tool-less volume management.
+- **Spotify Control:** Uses the official Spotify Web API directly. This provides granular control (playlists, queue, specific tracks) and works independently of the local Spotify desktop client's focus.
+- **Linux Support:** Volume and media controls require OS tools (e.g., `pactl`, `playerctl`, `nmcli`, `rfkill`) to be installed and available in `PATH`.
+- **Spotify API Compatibility:** Playback control endpoints (volume, skip, etc.) require explicit `Content-Length: 0` and `Content-Type: application/json` headers for empty-body PUT/POST requests.
+- **Security:** `list_directory` root access is restricted. The allowlist can be configured via `JARVIS_SKILLS_LIST_ALLOWED_ROOTS` (semicolon-separated).
