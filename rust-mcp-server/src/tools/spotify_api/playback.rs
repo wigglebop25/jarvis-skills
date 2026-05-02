@@ -17,14 +17,20 @@ impl SpotifyClient {
             .await
     }
 
-    pub async fn pause_playback(&self) -> Result<(), String> {
+    pub async fn pause_playback(&self, device_id: Option<&str>) -> Result<(), String> {
         let token = self.get_access_token().await?;
+        let mut url = "https://api.spotify.com/v1/me/player/pause".to_string();
+        if let Some(device_id) = device_id {
+            url.push_str("?device_id=");
+            url.push_str(&encode(device_id));
+        }
 
         let response = self
             .http_client
-            .put("https://api.spotify.com/v1/me/player/pause")
+            .put(&url)
             .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Length", "0")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .body("")
             .timeout(Duration::from_secs(5))
             .send()
@@ -34,14 +40,20 @@ impl SpotifyClient {
         playback_status_result(response.status(), "Failed to pause")
     }
 
-    pub async fn next_track(&self) -> Result<(), String> {
+    pub async fn next_track(&self, device_id: Option<&str>) -> Result<(), String> {
         let token = self.get_access_token().await?;
+        let mut url = "https://api.spotify.com/v1/me/player/next".to_string();
+        if let Some(device_id) = device_id {
+            url.push_str("?device_id=");
+            url.push_str(&encode(device_id));
+        }
 
         let response = self
             .http_client
-            .post("https://api.spotify.com/v1/me/player/next")
+            .post(&url)
             .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Length", "0")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .body("")
             .timeout(Duration::from_secs(5))
             .send()
@@ -51,14 +63,20 @@ impl SpotifyClient {
         playback_status_result(response.status(), "Failed to skip to next")
     }
 
-    pub async fn previous_track(&self) -> Result<(), String> {
+    pub async fn previous_track(&self, device_id: Option<&str>) -> Result<(), String> {
         let token = self.get_access_token().await?;
+        let mut url = "https://api.spotify.com/v1/me/player/previous".to_string();
+        if let Some(device_id) = device_id {
+            url.push_str("?device_id=");
+            url.push_str(&encode(device_id));
+        }
 
         let response = self
             .http_client
-            .post("https://api.spotify.com/v1/me/player/previous")
+            .post(&url)
             .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Length", "0")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .body("")
             .timeout(Duration::from_secs(5))
             .send()
@@ -88,7 +106,8 @@ impl SpotifyClient {
             .http_client
             .put(&url)
             .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Length", "0")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .body("")
             .timeout(Duration::from_secs(5))
             .send()
@@ -110,7 +129,8 @@ impl SpotifyClient {
             .http_client
             .put(&url)
             .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Length", "0")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .body("")
             .timeout(Duration::from_secs(5))
             .send()
@@ -135,7 +155,8 @@ impl SpotifyClient {
             .http_client
             .post(&url)
             .header("Authorization", format!("Bearer {}", token))
-            .header("Content-Length", "0")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .header(reqwest::header::CONTENT_LENGTH, "0")
             .body("")
             .timeout(Duration::from_secs(5))
             .send()
