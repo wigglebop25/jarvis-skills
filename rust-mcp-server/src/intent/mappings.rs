@@ -10,7 +10,7 @@ pub fn map_params_to_args(
     confidence: f64,
 ) -> RouteDecision {
     let mut final_args = raw_params.clone();
-    
+
     match intent_type {
         IntentType::VolumeControl => {
             if let Some(direction) = raw_params.get("direction").and_then(|v| v.as_str()) {
@@ -32,7 +32,23 @@ pub fn map_params_to_args(
         }
         IntentType::MusicControl => {
             let mut final_tool = "playMusic".to_string();
-            if let Some(action) = raw_params.get("action").and_then(|v| v.as_str()) {
+            let text = text_lower;
+            
+            // Priority check for information requests
+            if text.contains("queue") || text.contains("upcoming") {
+                if text.contains("add") {
+                    final_tool = "addToQueue".to_string();
+                    if let Some(m) = Regex::new(r"add\s+(.*?)\s+to").unwrap().captures(text) {
+                        final_args.insert("uri".to_string(), Value::String(m.get(1).unwrap().as_str().trim().to_string()));
+                    }
+                } else {
+                    final_tool = "getQueue".to_string();
+                }
+            } else if text.contains("playlist") {
+                final_tool = "getMyPlaylists".to_string();
+            } else if text.contains("playing") || text.contains("current track") {
+                final_tool = "getNowPlaying".to_string();
+            } else if let Some(action) = raw_params.get("action").and_then(|v| v.as_str()) {
                 match action {
                     "pause" => final_tool = "pausePlayback".to_string(),
                     "next" => final_tool = "skipToNext".to_string(),
@@ -42,8 +58,18 @@ pub fn map_params_to_args(
                     "queue" => final_tool = "addToQueue".to_string(),
                     _ => final_tool = "playMusic".to_string(),
                 }
-                final_args.remove("action");
             }
+            
+            if final_tool == "searchSpotify" {
+                 if let Some(m) = Regex::new(r"(?:search|find)\s+(?:for\s+)?(?:the\s+)?(.*?)\s+on\s+spotify").unwrap().captures(text) {
+                     let query = m.get(1).unwrap().as_str().trim();
+                     final_args.insert("query".to_string(), Value::String(query.to_string()));
+                     let stype = if text.contains("album") { "album" } else if text.contains("artist") { "artist" } else { "track" };
+                     final_args.insert("type".to_string(), Value::String(stype.to_string()));
+                 }
+            }
+
+            final_args.remove("action");
             let should_exec = confidence >= 0.85;
             return RouteDecision {
                 intent: intent_type.as_str().to_string(),
@@ -105,7 +131,6 @@ pub fn map_params_to_args(
                 }
             };
 
-            // Check for common aliases
             if Regex::new(r"(?i)\bdownloads?\b").unwrap().is_match(text_lower) {
                 if let Some(p) = dirs::download_dir() {
                     path_str = Some(p.to_string_lossy().to_string());
@@ -126,7 +151,6 @@ pub fn map_params_to_args(
                 }
             }
 
-            // Explicit drive formats
             if path_str.is_none() {
                 for pattern in &[r"(?i)\b([a-z])\s*:", r"(?i)\bdrive\s*([a-z])\b", r"(?i)\b([a-z])\s*drive\b"] {
                     if let Some(caps) = Regex::new(pattern).unwrap().captures(text_lower) {
@@ -151,16 +175,6 @@ pub fn map_params_to_args(
             }
 
             if path_str.is_none() {
-                if let Some(caps) = Regex::new(r"(?i)\bi\s+the\s+([a-z])\b").unwrap().captures(text_lower) {
-                    if let Some(m) = caps.get(1) {
-                        if let Some(drive) = drive_root_fn(m.as_str(), true) {
-                            path_str = Some(drive);
-                        }
-                    }
-                }
-            }
-
-            if path_str.is_none() {
                 if let Some(home) = dirs::home_dir() {
                     path_str = Some(home.to_string_lossy().to_string());
                 } else {
@@ -169,7 +183,7 @@ pub fn map_params_to_args(
             }
 
             final_args.insert("path".to_string(), Value::String(path_str.unwrap()));
-            
+
             let is_hidden = raw_params.get("include_hidden").and_then(|v| v.as_str()) == Some("true");
             final_args.insert("include_hidden".to_string(), Value::Bool(is_hidden));
             final_args.insert("max_entries".to_string(), Value::Number(200.into()));
@@ -183,7 +197,7 @@ pub fn map_params_to_args(
         IntentType::FileOrganization => {
             let folder_alias = raw_params.get("target_folder").and_then(|v| v.as_str()).unwrap_or("downloads");
             let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
-            
+
             let path_val = match folder_alias {
                 "downloads" => home.join("Downloads"),
                 "desktop" => home.join("Desktop"),
@@ -191,7 +205,7 @@ pub fn map_params_to_args(
                 _ => home.join("Downloads"),
             };
             final_args.insert("path".to_string(), Value::String(path_val.to_string_lossy().to_string()));
-            
+
             if !final_args.contains_key("strategy") {
                 final_args.insert("strategy".to_string(), Value::String("extension".to_string()));
             }
