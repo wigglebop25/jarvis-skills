@@ -131,41 +131,48 @@ fn ensure_allowed_listing_root(path: &Path) -> Result<(), String> {
 }
 
 fn listing_allowed_roots() -> Result<Vec<PathBuf>, String> {
-    let env_val = env::var("JARVIS_SKILLS_LIST_ALLOWED_ROOTS")
-        .or_else(|_| env::var("JARVIS_SKILLS_ALLOWED_ROOTS"));
-
-    if let Ok(v) = env_val {
-        let mut roots = Vec::new();
-        for part in v.split(';') {
-            let p = part.trim();
-            if p.is_empty() {
-                continue;
-            }
-            if let Ok(c) = fs::canonicalize(p) {
-                roots.push(c);
-            }
-        }
-        if !roots.is_empty() {
-            return Ok(roots);
-        }
-    }
-
+    // Always use auto-detection for standard user directories
     #[cfg(target_os = "windows")]
     {
         let mut roots = Vec::new();
-        for letter in b'A'..=b'Z' {
-            let drive = format!("{}:\\", letter as char);
-            let p = PathBuf::from(&drive);
-            if p.exists() {
-                if let Ok(c) = fs::canonicalize(&p) {
-                    roots.push(c);
-                } else {
-                    roots.push(p);
+        
+        // Add standard user directories that work on any Windows machine
+        if let Ok(user_profile) = env::var("USERPROFILE") {
+            let profile_path = PathBuf::from(&user_profile);
+            
+            // Add common user directories
+            let common_dirs = vec![
+                profile_path.join("Downloads"),
+                profile_path.join("Documents"),
+                profile_path.join("Desktop"),
+                profile_path.clone(),
+            ];
+            
+            for dir in common_dirs {
+                if dir.exists() {
+                    if let Ok(c) = fs::canonicalize(&dir) {
+                        roots.push(c);
+                    } else {
+                        roots.push(dir);
+                    }
                 }
             }
         }
+        
+        // Also allow project directory if it's defined
+        if let Ok(project_root) = env::var("JARVIS_PROJECT_ROOT") {
+            let project_path = PathBuf::from(&project_root);
+            if project_path.exists() {
+                if let Ok(c) = fs::canonicalize(&project_path) {
+                    roots.push(c);
+                } else {
+                    roots.push(project_path);
+                }
+            }
+        }
+        
         if roots.is_empty() {
-            return Err("Could not resolve any Windows drive roots".to_string());
+            return Err("Could not resolve any allowed Windows directories. Set USERPROFILE or JARVIS_PROJECT_ROOT".to_string());
         }
         return Ok(roots);
     }
