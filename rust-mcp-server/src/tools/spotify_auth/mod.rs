@@ -302,8 +302,10 @@ impl SpotifyAuth {
         let login_url = self.get_login_url();
         
         if cfg!(target_os = "windows") {
+            // Use double quotes around the URL to prevent ampersands from breaking the command
+            let quoted_url = format!("\"{}\"", login_url);
             let _ = std::process::Command::new("cmd")
-                .args(&["/C", "start", "", &login_url])
+                .args(&["/C", "start", "", &quoted_url])
                 .spawn();
         } else {
             let _ = std::process::Command::new("xdg-open")
