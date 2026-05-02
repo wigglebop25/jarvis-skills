@@ -18,31 +18,6 @@ impl SpotifyClient {
 
         let token = self.get_access_token().await?;
 
-        let user_response = self
-            .http_client
-            .get("https://api.spotify.com/v1/me")
-            .header("Authorization", format!("Bearer {}", token))
-            .timeout(Duration::from_secs(5))
-            .send()
-            .await
-            .map_err(|e| format!("Failed to get user profile: {}", e))?;
-
-        let user_id = if user_response.status().is_success() {
-            let data: Value = user_response
-                .json()
-                .await
-                .map_err(|e| format!("Failed to parse user profile: {}", e))?;
-            data["id"]
-                .as_str()
-                .ok_or("User ID not found in profile")?
-                .to_string()
-        } else {
-            return Err(format!(
-                "Failed to get user profile: {}",
-                user_response.status()
-            ));
-        };
-
         let mut body = json!({ "name": name });
         if let Some(p) = public {
             body["public"] = json!(p);
@@ -54,10 +29,10 @@ impl SpotifyClient {
             body["description"] = json!(d);
         }
 
-        let url = format!("https://api.spotify.com/v1/users/{}/playlists", user_id);
+        let url = "https://api.spotify.com/v1/me/playlists";
         let response = self
             .http_client
-            .post(&url)
+            .post(url)
             .header("Authorization", format!("Bearer {}", token))
             .json(&body)
             .timeout(Duration::from_secs(5))
@@ -72,7 +47,9 @@ impl SpotifyClient {
                 .map_err(|e| format!("Failed to parse create playlist response: {}", e))?;
             Ok(data)
         } else {
-            Err(format!("Failed to create playlist: {}", response.status()))
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "No error body".to_string());
+            Err(format!("Failed to create playlist: {} - {}", status, error_text))
         }
     }
 
