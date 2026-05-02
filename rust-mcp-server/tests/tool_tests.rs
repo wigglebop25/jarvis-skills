@@ -519,7 +519,8 @@ fn test_control_bluetooth_device_missing_action() {
 // - Graceful degradation on unavailable features
 //
 // Notes for MVP:
-// - Tests accept failures on systems without required tools (e.g., nircmd, playerctl)
+// - Tests accept failures on systems without required OS tools (e.g., playerctl, pactl)
+// - Windows volume control uses native APIs (Core Audio), no external tools required.
 // - Tests verify response structure rather than exact values
 // - Error messages are checked for content validity
 // - All 7 tools have at least 2 tests each
