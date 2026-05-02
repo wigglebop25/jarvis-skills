@@ -221,11 +221,18 @@ impl SpotifyClient {
         let ids = urlencoding::encode(&joined_ids);
         let url = format!("https://api.spotify.com/v1/me/albums?ids={ids}");
 
-        let request = if action == "save" {
+        let mut request = if action == "save" {
             self.http_client.put(&url)
         } else {
             self.http_client.delete(&url)
         };
+
+        if action == "save" {
+            request = request
+                .header(reqwest::header::CONTENT_TYPE, "application/json")
+                .header(reqwest::header::CONTENT_LENGTH, "0")
+                .body("");
+        }
 
         let response = request
             .header("Authorization", format!("Bearer {}", token))
