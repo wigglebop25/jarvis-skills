@@ -13,10 +13,10 @@ pub async fn handle_write_tool(
 ) -> Option<Result<Value, String>> {
     match name {
         "playMusic" => Some(play_music(args, client).await),
-        "pausePlayback" => Some(pause_playback(client).await),
+        "pausePlayback" => Some(pause_playback(args, client).await),
         "resumePlayback" => Some(resume_playback(args, client).await),
-        "skipToNext" => Some(skip_to_next(client).await),
-        "skipToPrevious" => Some(skip_to_previous(client).await),
+        "skipToNext" => Some(skip_to_next(args, client).await),
+        "skipToPrevious" => Some(skip_to_previous(args, client).await),
         "setVolume" => Some(set_volume(args, client).await),
         "adjustVolume" => Some(adjust_volume(args, client).await),
         "addToQueue" => Some(add_to_queue(args, client).await),
@@ -172,9 +172,14 @@ async fn play_music(args: &Map<String, Value>, client: &SpotifyClient) -> Result
     }
 }
 
-async fn pause_playback(client: &SpotifyClient) -> Result<Value, String> {
-    client.pause_playback().await?;
-    Ok(json!({"action": "pause", "success": true, "mode": "api"}))
+async fn pause_playback(args: &Map<String, Value>, client: &SpotifyClient) -> Result<Value, String> {
+    let device_id = args.get("deviceId").and_then(Value::as_str);
+    client.pause_playback(device_id).await?;
+    let mut response = json!({"action": "pause", "success": true, "mode": "api"});
+    if let Some(device_id) = device_id {
+        response["device_id"] = json!(device_id);
+    }
+    Ok(response)
 }
 
 async fn resume_playback(args: &Map<String, Value>, client: &SpotifyClient) -> Result<Value, String> {
@@ -189,14 +194,24 @@ async fn resume_playback(args: &Map<String, Value>, client: &SpotifyClient) -> R
     Ok(response)
 }
 
-async fn skip_to_next(client: &SpotifyClient) -> Result<Value, String> {
-    client.next_track().await?;
-    Ok(json!({"action": "next", "success": true, "mode": "api"}))
+async fn skip_to_next(args: &Map<String, Value>, client: &SpotifyClient) -> Result<Value, String> {
+    let device_id = args.get("deviceId").and_then(Value::as_str);
+    client.next_track(device_id).await?;
+    let mut response = json!({"action": "next", "success": true, "mode": "api"});
+    if let Some(device_id) = device_id {
+        response["device_id"] = json!(device_id);
+    }
+    Ok(response)
 }
 
-async fn skip_to_previous(client: &SpotifyClient) -> Result<Value, String> {
-    client.previous_track().await?;
-    Ok(json!({"action": "previous", "success": true, "mode": "api"}))
+async fn skip_to_previous(args: &Map<String, Value>, client: &SpotifyClient) -> Result<Value, String> {
+    let device_id = args.get("deviceId").and_then(Value::as_str);
+    client.previous_track(device_id).await?;
+    let mut response = json!({"action": "previous", "success": true, "mode": "api"});
+    if let Some(device_id) = device_id {
+        response["device_id"] = json!(device_id);
+    }
+    Ok(response)
 }
 
 async fn set_volume(args: &Map<String, Value>, client: &SpotifyClient) -> Result<Value, String> {
