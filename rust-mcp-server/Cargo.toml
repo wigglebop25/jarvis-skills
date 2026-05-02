@@ -6,8 +6,10 @@ description = "MCP server that handles system control and hardware integration f
 
 [dependencies]
 axum = { version = "0.8", features = ["json"] }
+base64 = "0.22.1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 dirs = "6"
+dotenv = "0.15"
 regex = "1.12.3"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
@@ -16,8 +18,19 @@ sysinfo = "0.37"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "io-std", "io-util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+urlencoding = "2.1.3"
 walkdir = "2"
 which = "8"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61.3", features = [
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_Foundation",
+] }
 
 [profile.release]
 lto = "thin"
