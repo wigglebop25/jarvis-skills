@@ -6,6 +6,7 @@ pub async fn maybe_handle_auth_tool(name: &str) -> Option<Result<Value, String>>
     match name {
         "authorizeSpotify" | "authorize" => Some(authorize().await),
         "checkSpotifyAuth" | "check_auth" => Some(check_auth().await),
+        "logoutSpotify" => Some(logout().await),
         _ => None,
     }
 }
@@ -34,4 +35,21 @@ fn build_auth() -> Result<spotify_auth::SpotifyAuth, String> {
         client_secret,
         redirect_uri,
     ))
+}
+
+async fn logout() -> Result<Value, String> {
+    let mut logged_out = false;
+    if std::path::Path::new(".cache").exists() {
+        std::fs::remove_file(".cache").map_err(|e| format!("Failed to logout: {}", e))?;
+        logged_out = true;
+    }
+    if std::path::Path::new("../.cache").exists() {
+        std::fs::remove_file("../.cache").map_err(|e| format!("Failed to logout: {}", e))?;
+        logged_out = true;
+    }
+    if logged_out {
+        Ok(serde_json::json!({ "message": "Successfully logged out of Spotify." }))
+    } else {
+        Ok(serde_json::json!({ "message": "You were not logged in." }))
+    }
 }

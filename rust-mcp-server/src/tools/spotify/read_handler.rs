@@ -1,5 +1,6 @@
 use serde_json::{json, Map, Value};
 
+use super::helpers::*;
 use super::super::spotify_api::SpotifyClient;
 
 const SPOTIFY_READ_ALBUM_BATCH_LIMIT: usize = 20;
@@ -32,23 +33,62 @@ async fn search_spotify(args: &Map<String, Value>, client: &SpotifyClient) -> Re
         .and_then(Value::as_str)
         .ok_or_else(|| "Missing required field: query".to_string())?;
 
-    let tracks = client
-        .search_tracks(query, 5)
+    let search_type = args
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or("track");
+
+    let limit = args.get("limit").and_then(Value::as_i64).unwrap_or(5) as u32;
+
+    let search_result = client
+        .search(query, search_type, limit)
         .await
         .map_err(|error| format!("Spotify search failed: {}", error))?;
 
-    let results: Vec<Value> = tracks
-        .iter()
-        .map(|track| {
-            json!({
-                "name": track.name,
-                "artist": track.artist,
-                "uri": track.uri,
-            })
-        })
-        .collect();
+    let mut results = json!({});
 
-    Ok(json!({"results": results}))
+    if let Some(tracks) = search_result.tracks {
+        results["tracks"] = json!(tracks
+            .iter()
+            .map(|track| {
+                json!({
+                    "name": track.name,
+                    "artist": track.artist,
+                    "uri": track.uri,
+                })
+            })
+            .collect::<Vec<_>>());
+    }
+
+    if let Some(playlists) = search_result.playlists {
+        results["playlists"] = json!(playlists
+            .iter()
+            .map(|p| {
+                json!({
+                    "id": p.id,
+                    "name": p.name,
+                    "uri": p.uri,
+                    "description": p.description,
+                })
+            })
+            .collect::<Vec<_>>());
+    }
+
+    if let Some(albums) = search_result.albums {
+        results["albums"] = json!(albums
+            .iter()
+            .map(|a| {
+                json!({
+                    "id": a.id,
+                    "name": a.name,
+                    "artists": a.artists,
+                    "uri": a.uri,
+                })
+            })
+            .collect::<Vec<_>>());
+    }
+
+    Ok(json!({ "results": results }))
 }
 
 async fn get_now_playing(client: &SpotifyClient) -> Result<Value, String> {
@@ -113,14 +153,16 @@ async fn get_playlist_tracks(
     args: &Map<String, Value>,
     client: &SpotifyClient,
 ) -> Result<Value, String> {
-    let playlist_id = args
+    let playlist_input = args
         .get("playlistId")
         .and_then(Value::as_str)
         .ok_or_else(|| "Missing required field: playlistId".to_string())?;
+    let playlist_id = resolve_playlist_id(playlist_input, client).await?;
     let limit = args.get("limit").and_then(Value::as_i64).unwrap_or(20) as u32;
     let offset = args.get("offset").and_then(Value::as_i64).unwrap_or(0) as u32;
 
-    let tracks = client.get_playlist_tracks(playlist_id, limit, offset).await?;
+    let tracks = client.get_playlist_tracks(&playlist_id, limit, offset).await
+        .map_err(|e| format!("Failed to get playlist tracks: {}", e))?;
     let track_list: Vec<Value> = tracks
         .iter()
         .map(|track| {
@@ -221,11 +263,13 @@ async fn get_queue(args: &Map<String, Value>, client: &SpotifyClient) -> Result<
 }
 
 async fn get_playlist(args: &Map<String, Value>, client: &SpotifyClient) -> Result<Value, String> {
-    let playlist_id = args
+    let playlist_input = args
         .get("playlistId")
         .and_then(Value::as_str)
         .ok_or_else(|| "Missing required field: playlistId".to_string())?;
-    let playlist = client.get_playlist(playlist_id).await?;
+    let playlist_id = resolve_playlist_id(playlist_input, client).await?;
+    let playlist = client.get_playlist(&playlist_id).await
+        .map_err(|e| format!("Failed to get playlist: {}", e))?;
     Ok(json!({
         "id": playlist.id,
         "name": playlist.name,
@@ -274,6 +318,41 @@ async fn check_users_saved_albums(
     let album_ids = parse_album_ids(args.get("albumIds"))?;
     let saved = client.check_user_saved_albums(album_ids).await?;
     Ok(json!({"saved": saved}))
+}
+
+async fn resolve_playlist_id(
+    playlist_input: &str,
+    client: &SpotifyClient,
+) -> Result<String, String> {
+    // 1. Try to normalize as a Spotify ID, URI, or URL directly
+    if let Ok(id) = normalize_spotify_id(playlist_input, "playlist") {
+        return Ok(id);
+    }
+
+    // 2. If direct normalization fails, assume it's a playlist name and search within user's playlists
+    let mut offset = 0;
+    let limit = 50; // Max limit for get_playlists
+    loop {
+        let playlists = client.get_playlists(limit, offset).await?;
+        if playlists.is_empty() {
+            break;
+        }
+
+        if let Some(playlist) = playlists.iter().find(|p| p.name == playlist_input) {
+            return Ok(playlist.id.clone()); // Clone the id since we only have a reference
+        }
+
+        // Check if there are more pages *before* consuming playlists
+        if playlists.len() < limit as usize {
+            break; // Less than limit, so no more pages
+        }
+        offset += limit;
+    }
+
+    Err(format!(
+        "Could not resolve playlist '{}' to a Spotify ID. Please provide a valid ID, URI, URL, or a unique name.",
+        playlist_input
+    ))
 }
 
 fn parse_album_ids(album_ids_value: Option<&Value>) -> Result<Vec<String>, String> {

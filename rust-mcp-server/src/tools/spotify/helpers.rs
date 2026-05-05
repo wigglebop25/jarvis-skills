@@ -299,3 +299,85 @@ pub fn normalize_item_type(item_type: &str) -> Result<&'static str, String> {
         _ => Err("type must be one of: track, album, artist, playlist, episode, show".to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_normalize_spotify_id_direct() {
+        assert_eq!(normalize_spotify_id("6rqhFgOV96wjA7qRaqvC9v", "track").unwrap(), "6rqhFgOV96wjA7qRaqvC9v");
+        assert_eq!(normalize_spotify_id(" 6rqhFgOV96wjA7qRaqvC9v ", "track").unwrap(), "6rqhFgOV96wjA7qRaqvC9v");
+    }
+
+    #[test]
+    fn test_normalize_spotify_id_uri() {
+        assert_eq!(normalize_spotify_id("spotify:track:6rqhFgOV96wjA7qRaqvC9v", "track").unwrap(), "6rqhFgOV96wjA7qRaqvC9v");
+        assert!(normalize_spotify_id("spotify:album:6rqhFgOV96wjA7qRaqvC9v", "track").is_err());
+    }
+
+    #[test]
+    fn test_normalize_spotify_id_url() {
+        assert_eq!(normalize_spotify_id("https://open.spotify.com/track/6rqhFgOV96wjA7qRaqvC9v?si=abc", "track").unwrap(), "6rqhFgOV96wjA7qRaqvC9v");
+        assert_eq!(normalize_spotify_id("http://open.spotify.com/track/6rqhFgOV96wjA7qRaqvC9v", "track").unwrap(), "6rqhFgOV96wjA7qRaqvC9v");
+        assert!(normalize_spotify_id("https://open.spotify.com/album/6rqhFgOV96wjA7qRaqvC9v", "track").is_err());
+    }
+
+    #[test]
+    fn test_normalize_spotify_id_invalid() {
+        assert!(normalize_spotify_id("", "track").is_err());
+        assert!(normalize_spotify_id("short", "track").is_err());
+        assert!(normalize_spotify_id("too-long-id-that-is-more-than-22-chars", "track").is_err());
+        assert!(normalize_spotify_id("invalid!char@in#id", "track").is_err());
+    }
+
+    #[test]
+    fn test_parse_non_empty_string() {
+        let mut args = Map::new();
+        args.insert("name".to_string(), json!("My Playlist"));
+        assert_eq!(parse_non_empty_string(&args, "name").unwrap(), "My Playlist");
+
+        args.insert("empty".to_string(), json!("  "));
+        assert!(parse_non_empty_string(&args, "empty").is_err());
+        assert!(parse_non_empty_string(&args, "missing").is_err());
+    }
+
+    #[test]
+    fn test_parse_required_u32() {
+        let mut args = Map::new();
+        args.insert("count".to_string(), json!(42));
+        assert_eq!(parse_required_u32(&args, "count").unwrap(), 42);
+
+        args.insert("negative".to_string(), json!(-1));
+        assert!(parse_required_u32(&args, "negative").is_err());
+    }
+
+    #[test]
+    fn test_normalize_item_type() {
+        assert_eq!(normalize_item_type("Track").unwrap(), "track");
+        assert_eq!(normalize_item_type("album").unwrap(), "album");
+        assert!(normalize_item_type("invalid").is_err());
+    }
+
+    #[test]
+    fn test_resolve_playback_uri_direct() {
+        let mut args = Map::new();
+        args.insert("uri".to_string(), json!("spotify:track:6rqhFgOV96wjA7qRaqvC9v"));
+        assert_eq!(resolve_playback_uri(&args).unwrap(), "spotify:track:6rqhFgOV96wjA7qRaqvC9v");
+    }
+
+    #[test]
+    fn test_resolve_playback_uri_type_id() {
+        let mut args = Map::new();
+        args.insert("type".to_string(), json!("track"));
+        args.insert("id".to_string(), json!("6rqhFgOV96wjA7qRaqvC9v"));
+        assert_eq!(resolve_playback_uri(&args).unwrap(), "spotify:track:6rqhFgOV96wjA7qRaqvC9v");
+    }
+
+    #[test]
+    fn test_resolve_playback_uri_missing() {
+        let args = Map::new();
+        assert!(resolve_playback_uri(&args).is_err());
+    }
+}
