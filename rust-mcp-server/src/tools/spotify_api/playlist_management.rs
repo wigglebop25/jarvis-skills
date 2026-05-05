@@ -77,7 +77,7 @@ impl SpotifyClient {
         }
 
         let url = format!(
-            "https://api.spotify.com/v1/playlists/{}/tracks",
+            "https://api.spotify.com/v1/playlists/{}/items",
             playlist_id
         );
         let response = self
@@ -97,7 +97,11 @@ impl SpotifyClient {
                 .map_err(|e| format!("Failed to parse add tracks response: {}", e))?;
             parse_snapshot_id(&data, "add tracks")
         } else {
-            Err(format!("Failed to add tracks: {}", response.status()))
+            let status = response.status();
+            let _headers = response.headers().clone(); // Clone headers before consuming response
+            let error_text = response.text().await.unwrap_or_else(|_| "No error body".to_string());
+            // DEBUG PRINT START
+            Err(format!("Failed to add tracks: {} - {}", status, error_text))
         }
     }
 
@@ -184,7 +188,7 @@ impl SpotifyClient {
         }
 
         let url = format!(
-            "https://api.spotify.com/v1/playlists/{}/tracks",
+            "https://api.spotify.com/v1/playlists/{}/items",
             playlist_id
         );
         let response = self
@@ -240,7 +244,7 @@ impl SpotifyClient {
         }
 
         let url = format!(
-            "https://api.spotify.com/v1/playlists/{}/tracks",
+            "https://api.spotify.com/v1/playlists/{}/items",
             playlist_id
         );
         let response = self

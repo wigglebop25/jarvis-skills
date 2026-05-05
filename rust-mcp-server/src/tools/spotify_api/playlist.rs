@@ -47,7 +47,7 @@ impl SpotifyClient {
     ) -> Result<Vec<PlaylistTrack>, String> {
         let token = self.get_access_token().await?;
         let url = format!(
-            "https://api.spotify.com/v1/playlists/{}/tracks?limit={}&offset={}",
+            "https://api.spotify.com/v1/playlists/{}/items?limit={}&offset={}",
             playlist_id,
             limit.min(50),
             offset
@@ -63,10 +63,13 @@ impl SpotifyClient {
             .map_err(|e| format!("Failed to get playlist tracks: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!(
-                "Failed to get playlist tracks: {}",
-                response.status()
-            ));
+            let status = response.status();
+            // Handle specific 403 errors which often occur for empty playlists
+            if status == reqwest::StatusCode::FORBIDDEN {
+                return Ok(Vec::new());
+            }
+            let error_text = response.text().await.unwrap_or_else(|_| "No error body".to_string());
+            return Err(format!("Failed to get playlist tracks: {} - {}", status, error_text));
         }
 
         #[derive(Deserialize)]
@@ -76,6 +79,7 @@ impl SpotifyClient {
 
         #[derive(Deserialize)]
         struct PlaylistTrackItem {
+            #[serde(alias = "item")]
             track: Option<TrackObject>,
             added_at: String,
         }
@@ -143,7 +147,9 @@ impl SpotifyClient {
             .map_err(|e| format!("Failed to get playlist: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!("Failed to get playlist: {}", response.status()));
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "No error body".to_string());
+            return Err(format!("Failed to get playlist: {} - {}", status, error_text));
         }
 
         let data: PlaylistInfo = response

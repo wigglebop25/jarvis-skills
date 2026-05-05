@@ -68,6 +68,16 @@ pub struct QueueItem {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResult {
+    pub tracks: Option<Vec<TrackInfo>>,
+    pub playlists: Option<Vec<PlaylistInfo>>,
+    pub albums: Option<Vec<AlbumInfo>>,
+    pub artists: Option<Vec<Value>>, // Placeholder for artists if needed
+}
+
+use serde_json::Value;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInfo {
     pub id: String,
     pub name: String,
