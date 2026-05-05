@@ -50,13 +50,14 @@ impl SpotifyAuth {
             "playlist-modify-private",
             "playlist-modify-public",
             "user-library-read",
+            "user-library-modify", 
             "user-read-recently-played",
             "user-top-read",
         ]
         .join("%20");
 
         format!(
-            "https://accounts.spotify.com/authorize?client_id={}&response_type=code&redirect_uri={}&scope={}",
+            "https://accounts.spotify.com/authorize?client_id={}&response_type=code&redirect_uri={}&scope={}&show_dialog=true",
             urlencoding::encode(&self.client_id),
             urlencoding::encode(&self.redirect_uri),
             scopes
@@ -302,10 +303,8 @@ impl SpotifyAuth {
         let login_url = self.get_login_url();
         
         if cfg!(target_os = "windows") {
-            // Use double quotes around the URL to prevent ampersands from breaking the command
-            let quoted_url = format!("\"{}\"", login_url);
-            let _ = std::process::Command::new("cmd")
-                .args(&["/C", "start", "", &quoted_url])
+            let _ = std::process::Command::new("rundll32")
+                .args(&["url.dll,FileProtocolHandler", &login_url])
                 .spawn();
         } else {
             let _ = std::process::Command::new("xdg-open")
