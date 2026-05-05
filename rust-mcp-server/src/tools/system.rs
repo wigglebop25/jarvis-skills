@@ -1,7 +1,7 @@
 use serde_json::{json, Map, Value};
 use sysinfo::{Disks, Networks, System};
 
-pub fn get_system_info(args: &Map<String, Value>) -> Result<Value, String> {
+pub async fn get_system_info(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let include = args
         .get("include")
         .and_then(Value::as_array)

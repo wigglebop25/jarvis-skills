@@ -2,7 +2,7 @@ use serde_json::{json, Map, Value};
 
 use super::shell::run_command;
 
-pub fn control_bluetooth_device(args: &Map<String, Value>) -> Result<Value, String> {
+pub async fn control_bluetooth_device(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let action = args
         .get("action")
         .and_then(Value::as_str)

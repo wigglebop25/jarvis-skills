@@ -1,6 +1,6 @@
 use serde_json::{json, Map, Value};
 
-pub fn control_volume(args: &Map<String, Value>) -> Result<Value, String> {
+pub async fn control_volume(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let action = args
         .get("action")
         .and_then(Value::as_str)
@@ -164,5 +164,58 @@ fn run_command(cmd: &str, args: &[&str]) -> Result<String, String> {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
         Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use crate::AppState;
+    use reqwest::Client;
+
+    fn mock_state() -> AppState {
+        AppState {
+            http: Client::new(),
+            spotify: None,
+        }
+    }
+
+    #[test]
+    fn test_clamp_0_100() {
+        assert_eq!(clamp_0_100(50), 50);
+        assert_eq!(clamp_0_100(-10), 0);
+        assert_eq!(clamp_0_100(110), 100);
+        assert_eq!(clamp_0_100(0), 0);
+        assert_eq!(clamp_0_100(100), 100);
+    }
+
+    #[tokio::test]
+    async fn test_control_volume_invalid_action() {
+        let mut args = Map::new();
+        args.insert("action".to_string(), json!("invalid"));
+        let state = mock_state();
+        let result = control_volume(&args, &state).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unsupported volume action"));
+    }
+
+    #[tokio::test]
+    async fn test_control_volume_missing_action() {
+        let args = Map::new();
+        let state = mock_state();
+        let result = control_volume(&args, &state).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Missing required field: action"));
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    #[test]
+    fn test_parse_percent_from_text() {
+        assert_eq!(parse_percent_from_text("Volume: 50%"), Some(50));
+        assert_eq!(parse_percent_from_text("75% volume level"), Some(75));
+        assert_eq!(parse_percent_from_text("no percentage here"), None);
+        assert_eq!(parse_percent_from_text("120%"), Some(100));
+        assert_eq!(parse_percent_from_text("-5%"), Some(0));
     }
 }

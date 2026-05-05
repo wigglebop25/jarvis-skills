@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 use serde_json::{json, Map, Value};
 
-pub fn resolve_path(args: &Map<String, Value>) -> Result<Value, String> {
+pub async fn resolve_path(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let name = args
         .get("name")
         .and_then(Value::as_str)

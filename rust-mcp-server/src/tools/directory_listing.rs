@@ -6,7 +6,7 @@ use std::{
 
 use serde_json::{json, Map, Value};
 
-pub fn list_directory(args: &Map<String, Value>) -> Result<Value, String> {
+pub async fn list_directory(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let path_str = args
         .get("path")
         .and_then(Value::as_str)

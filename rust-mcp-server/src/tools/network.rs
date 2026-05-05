@@ -2,7 +2,7 @@ use serde_json::{json, Map, Value};
 
 use super::shell::run_command;
 
-pub fn toggle_network(args: &Map<String, Value>) -> Result<Value, String> {
+pub async fn toggle_network(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let interface = args
         .get("interface")
         .and_then(Value::as_str)

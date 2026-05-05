@@ -4,7 +4,7 @@ use super::file_collector::collect_files;
 use super::categorizer::plan_moves;
 use super::collision_handler::unique_path_if_exists;
 
-pub fn organize_folder(args: &Map<String, Value>) -> Result<Value, String> {
+pub async fn organize_folder(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let path_str = args
         .get("path")
         .and_then(Value::as_str)

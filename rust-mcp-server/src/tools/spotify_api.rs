@@ -5,7 +5,6 @@ mod playback;
 mod playlist;
 mod playlist_management;
 mod query;
-
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reqwest::Client;
 use serde::Deserialize;
@@ -37,16 +36,19 @@ impl SpotifyClient {
         }
     }
 
+
+
     pub(crate) async fn get_access_token(&self) -> Result<String, String> {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs() as i64;
 
-        // 1. Try memory cache first (lowest delay)
+        // 1. Try memory cache first
         {
             if let Ok(cache) = self.token_cache.read() {
                 if let Some(c) = cache.as_ref() {
+                    // Check if token is still valid with a 60-second buffer
                     if c.expires_at > now + 60 {
                         return Ok(c.token.clone());
                     }
@@ -61,42 +63,30 @@ impl SpotifyClient {
             }
         }
 
-        // 3. Try .cache file
+        // 3. Try .cache file for refresh token
         let cache_paths = [".cache", "../.cache"];
-        let mut cache_json: Option<serde_json::Value> = None;
+        let mut refresh_token_from_cache: Option<String> = None;
 
         for path in cache_paths {
             if let Ok(content) = std::fs::read_to_string(path) {
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-                    cache_json = Some(json);
-                    break;
-                }
-            }
-        }
-
-        if let Some(cache) = cache_json {
-            if let Some(token) = cache.get("access_token").and_then(|v| v.as_str()) {
-                let expires_at = cache.get("expires_at").and_then(|v| v.as_i64()).unwrap_or(0);
-
-                // If token is valid and not expired (with 1 minute buffer)
-                if expires_at > now + 60 {
-                    self.update_memory_cache(token.to_string(), expires_at);
-                    return Ok(token.to_string());
-                }
-
-                // Try to refresh if we have a refresh token
-                if let Some(refresh_token) = cache.get("refresh_token").and_then(|v| v.as_str()) {
-                    if let Ok(new_token) = self.refresh_access_token(refresh_token).await {
-                        return Ok(new_token);
+                    if let Some(refresh_token) = json.get("refresh_token").and_then(|v| v.as_str()) {
+                        refresh_token_from_cache = Some(refresh_token.to_string());
+                        break;
                     }
                 }
-
-                // Last resort
-                return Ok(token.to_string());
             }
         }
 
-        // 4. Fallback to client_credentials
+        // If a refresh token is found, try to refresh
+        if let Some(refresh_token) = refresh_token_from_cache {
+            match self.refresh_access_token(&refresh_token).await {
+                Ok(new_token) => return Ok(new_token),
+                Err(e) => return Err(format!("Failed to refresh token: {}", e)), // Propagate refresh error
+            }
+        }
+
+        // Fallback to client_credentials ONLY if no refresh token was found
         self.get_client_credentials_token().await
     }
 
@@ -128,7 +118,9 @@ impl SpotifyClient {
             .map_err(|e| format!("Spotify refresh request failed: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!("Refresh failed: {}", response.status()));
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "No error body".to_string());
+            return Err(format!("Refresh failed: {} - {}", status, error_text));
         }
 
         #[derive(Deserialize)]
@@ -186,10 +178,12 @@ impl SpotifyClient {
             .map_err(|e| format!("Spotify token request failed: {}", e))?;
 
         if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "No error body".to_string());
             return Err(format!(
                 "Spotify auth failed: {} - {}",
-                response.status(),
-                response.text().await.unwrap_or_default()
+                status,
+                error_text
             ));
         }
 
