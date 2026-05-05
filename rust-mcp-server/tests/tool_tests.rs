@@ -386,7 +386,7 @@ fn test_list_directory() {
                     
                     assert!(entry_obj.contains_key("name"), "Entry should have name field");
                     assert!(entry_obj.contains_key("path"), "Entry should have path field");
-                    assert!(entry_obj.contains_key("is_dir"), "Entry should have is_dir field");
+                    assert!(entry_obj.contains_key("type"), "Entry should have type field");
                 }
             }
         }
