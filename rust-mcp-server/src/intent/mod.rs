@@ -134,3 +134,51 @@ pub fn route_intent(text: &str) -> RouteDecision {
 
     mappings::map_params_to_args(&intent_type, &raw_params, &text_lower, confidence)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_route_intent_volume() {
+        let text = "set volume to 50";
+        let decision = route_intent(text);
+        assert_eq!(decision.intent, "VOLUME_CONTROL");
+        assert_eq!(decision.tool_name, Some("control_volume".to_string()));
+        assert_eq!(decision.arguments.get("action").unwrap().as_str().unwrap(), "set");
+        assert_eq!(decision.arguments.get("level").unwrap().as_i64().unwrap(), 50);
+    }
+
+    #[test]
+    fn test_route_intent_system() {
+        let text = "show system info";
+        let decision = route_intent(text);
+        assert_eq!(decision.intent, "SYSTEM_INFO");
+        assert_eq!(decision.tool_name, Some("get_system_info".to_string()));
+    }
+
+    #[test]
+    fn test_route_intent_music() {
+        let text = "play some rock music";
+        let decision = route_intent(text);
+        assert_eq!(decision.intent, "MUSIC_CONTROL");
+        assert_eq!(decision.tool_name, Some("playMusic".to_string()));
+    }
+
+    #[test]
+    fn test_route_intent_unknown() {
+        let text = "what is the meaning of life?";
+        let decision = route_intent(text);
+        assert_eq!(decision.intent, "GENERAL_QUERY");
+        assert_eq!(decision.tool_name, None);
+        assert_eq!(decision.should_execute, false);
+    }
+
+    #[test]
+    fn test_route_intent_empty() {
+        let text = "";
+        let decision = route_intent(text);
+        assert_eq!(decision.intent, "UNKNOWN");
+        assert_eq!(decision.should_execute, false);
+    }
+}

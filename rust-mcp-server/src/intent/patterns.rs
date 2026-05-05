@@ -27,8 +27,9 @@ impl IntentType {
                 static RE: OnceLock<Vec<Regex>> = OnceLock::new();
                 RE.get_or_init(|| {
                     vec![
-                        Regex::new(r"(?i)^system\s*(info|information|status)$").unwrap(),
+                        Regex::new(r"(?i)(show|get|view)?\s*system\s*(info|information|status|usage|stats)").unwrap(),
                         Regex::new(r"(?i)system\s*(usage|utilization)").unwrap(),
+
                         Regex::new(r"(?i)get\s*system\s*(info|information|status|usage)").unwrap(),
                         Regex::new(r"(?i)get_system_info").unwrap(),
                         Regex::new(r"(?i)(cpu|processor)\s*(usage|load|status)?").unwrap(),
