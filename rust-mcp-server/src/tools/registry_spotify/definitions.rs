@@ -379,6 +379,14 @@ pub fn auth_tool_definitions() -> Vec<Value> {
                 "properties": {},
             }),
         ),
+        spotify_tool(
+            "logoutSpotify",
+            "Logs the user out of Spotify by clearing the authentication cache.",
+            json!({
+                "type": "object",
+                "properties": {},
+            }),
+        ),
     ]
 }
 
