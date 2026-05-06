@@ -85,35 +85,18 @@ pub fn parse_required_string_array(args: &Map<String, Value>, field: &str) -> Re
 pub fn parse_string_or_array(args: &Map<String, Value>, field: &str) -> Result<Vec<String>, String> {
     let value = args
         .get(field)
-        .ok_or_else(|| format!("Missing required field: {field}"))?;
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("Missing required field: {field} (comma-separated string)"))?;
 
-    if let Some(single) = value.as_str() {
-        let trimmed = single.trim();
-        if trimmed.is_empty() {
-            return Err(format!("{field} cannot be empty"));
-        }
-        return Ok(vec![trimmed.to_string()]);
-    }
-
-    let values = value
-        .as_array()
-        .ok_or_else(|| format!("{field} must be a string or array of strings"))?;
-
-    let strings: Vec<String> = values
-        .iter()
-        .map(|entry| {
-            entry
-                .as_str()
-                .map(|s| s.trim().to_string())
-                .ok_or_else(|| format!("{field} entries must be strings"))
-        })
-        .collect::<Result<_, _>>()?;
+    let strings: Vec<String> = value
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect();
 
     if strings.is_empty() {
-        return Err(format!("{field} array cannot be empty"));
-    }
-    if strings.iter().any(|entry| entry.is_empty()) {
-        return Err(format!("{field} entries cannot be empty"));
+        return Err(format!("{field} list cannot be empty"));
     }
 
     Ok(strings)
