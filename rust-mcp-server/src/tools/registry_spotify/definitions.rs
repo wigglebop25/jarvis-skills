@@ -122,10 +122,7 @@ pub fn library_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "albumIds": {
-                        "oneOf": [
-                            {"type": "string", "description": "A single Spotify album ID"},
-                            {"type": "array", "items": {"type": "string"}, "description": "Array of Spotify album IDs (max 20)"}
-                        ]
+                        "type": "string", "description": "Comma-separated Spotify album IDs (max 20)"
                     }
                 },
                 "required": ["albumIds"]
@@ -138,10 +135,7 @@ pub fn library_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "albumIds": {
-                        "oneOf": [
-                            {"type": "string", "description": "A single Spotify album ID"},
-                            {"type": "array", "items": {"type": "string"}, "description": "Array of Spotify album IDs (max 20)"}
-                        ]
+                        "type": "string", "description": "Comma-separated Spotify album IDs (max 20)"
                     }
                 },
                 "required": ["albumIds"]
@@ -162,11 +156,7 @@ pub fn playback_tool_definitions() -> Vec<Value> {
                     "type": {"type": "string", "enum": ["track", "album", "artist", "playlist", "episode", "show"]},
                     "id": {"type": "string"},
                     "deviceId": {"type": "string"}
-                },
-                "anyOf": [
-                    {"required": ["uri"]},
-                    {"required": ["type", "id"]}
-                ]
+                }
             }),
         ),
         spotify_tool(
@@ -243,11 +233,7 @@ pub fn playback_tool_definitions() -> Vec<Value> {
                     "type": {"type": "string", "enum": ["track", "album", "artist", "playlist", "episode", "show"]},
                     "id": {"type": "string"},
                     "deviceId": {"type": "string"}
-                },
-                "anyOf": [
-                    {"required": ["uri"]},
-                    {"required": ["type", "id"]}
-                ]
+                }
             }),
         ),
     ]
@@ -276,7 +262,7 @@ pub fn write_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "playlistId": {"type": "string", "description": "The Spotify playlist ID"},
-                    "trackUris": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 100, "description": "Array of Spotify track URIs (or IDs/URLs) to add (max 100)"},
+                    "trackUris": {"type": "string", "description": "Comma-separated Spotify track URIs (or IDs/URLs) to add (max 100)"},
                     "position": {"type": "integer", "minimum": 0, "description": "Optional: zero-based position to insert tracks"}
                 },
                 "required": ["playlistId", "trackUris"]
@@ -304,7 +290,7 @@ pub fn write_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "playlistId": {"type": "string", "description": "The Spotify playlist ID"},
-                    "trackIds": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 100, "description": "Array of Spotify track IDs (or URIs/URLs) to remove (max 100)"},
+                    "trackIds": {"type": "string", "description": "Comma-separated Spotify track IDs (or URIs/URLs) to remove (max 100)"},
                     "snapshotId": {"type": "string", "description": "Optional: The playlist's snapshot ID"}
                 },
                 "required": ["playlistId", "trackIds"]
@@ -332,10 +318,7 @@ pub fn write_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "albumIds": {
-                        "oneOf": [
-                            {"type": "string", "description": "A single Spotify album ID"},
-                            {"type": "array", "items": {"type": "string"}, "description": "Array of Spotify album IDs (max 50)"}
-                        ]
+                        "type": "string", "description": "Comma-separated Spotify album IDs (max 50)"
                     },
                     "action": {"type": "string", "enum": ["save", "remove"], "description": "Whether to save or remove the albums"}
                 },
@@ -349,10 +332,7 @@ pub fn write_tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "trackIds": {
-                        "oneOf": [
-                            {"type": "string", "description": "A single Spotify track ID"},
-                            {"type": "array", "items": {"type": "string"}, "description": "Array of Spotify track IDs (max 50)"}
-                        ]
+                        "type": "string", "description": "Comma-separated Spotify track IDs (max 50)"
                     }
                 },
                 "required": ["trackIds"]
