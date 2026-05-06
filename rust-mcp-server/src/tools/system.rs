@@ -4,10 +4,11 @@ use sysinfo::{Disks, Networks, System};
 pub async fn get_system_info(args: &Map<String, Value>, _state: &crate::AppState) -> Result<Value, String> {
     let include = args
         .get("include")
-        .and_then(Value::as_array)
-        .map(|arr| {
-            arr.iter()
-                .filter_map(Value::as_str)
+        .and_then(Value::as_str)
+        .map(|s| {
+            s.split(',')
+                .map(str::trim)
+                .filter(|part| !part.is_empty())
                 .map(str::to_string)
                 .collect::<Vec<String>>()
         })

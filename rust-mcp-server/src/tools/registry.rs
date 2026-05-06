@@ -22,9 +22,8 @@ pub fn tool_definitions() -> Vec<Value> {
                 "type": "object",
                 "properties": {
                     "include": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Sections to include: cpu, ram, storage, network"
+                        "type": "string",
+                        "description": "Comma-separated sections to include: cpu, ram, storage, network"
                     }
                 }
             }),
