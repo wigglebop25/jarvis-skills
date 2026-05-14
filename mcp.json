@@ -5,6 +5,12 @@
       "args": [
         "--stdio"
       ]
+    },
+    "spotify": {
+      "command": "node",
+      "args": [
+        "spotify-mcp-server/build/index.js"
+      ]
     }
   }
 }

@@ -22,7 +22,7 @@ For deterministic routing hot-path migration from `jarvis-chat` to Rust, add JSO
 - `jarvis/route_and_call` → same decision payload, plus optional execution through existing `tools::execute_tool`
 
 Compatibility requirements:
-- `tools/list` and `tools/call`.
+- Expose the standard MCP methods: `tools/list` and `tools/call`.
 - Match Python intent-routing behavior (confidence threshold, tool mapping, argument mapping) for existing intents.
 - Return structured errors so chat runtime can auto-fallback to Python routing when needed.
 
@@ -57,16 +57,8 @@ Default bind:
 - `list_directory`: List directory contents with allowlist security.
 - `organize_folder`: Organize files by extension, type, or date.
 
-### Spotify (Full Integration)
-- **Auth:** `authorizeSpotify`, `checkSpotifyAuth`.
-- **Playback:** `playMusic`, `pausePlayback`, `resumePlayback`, `skipToNext`, `skipToPrevious`, `setVolume`, `adjustVolume`, `addToQueue`.
-- **Information:** `getNowPlaying`, `getRecentlyPlayed`, `getQueue`, `getAvailableDevices`, `searchSpotify`.
-- **Library & Playlists:** `getMyPlaylists`, `getPlaylistTracks`, `getPlaylist`, `getUsersSavedTracks`, `getAlbumTracks`, `getAlbums`, `checkUsersSavedAlbums`, `createPlaylist`, `addTracksToPlaylist`, `updatePlaylist`, `removeTracksFromPlaylist`, `reorderPlaylistItems`, `saveOrRemoveAlbumForUser`, `removeUsersSavedTracks`.
-
 ## Notes
 
 - **Windows Volume Control:** Uses the native `windows` crate (Core Audio APIs) for high-performance, tool-less volume management.
-- **Spotify Control:** Uses the official Spotify Web API directly. This provides granular control (playlists, queue, specific tracks) and works independently of the local Spotify desktop client's focus.
 - **Linux Support:** Volume and media controls require OS tools (e.g., `pactl`, `playerctl`, `nmcli`, `rfkill`) to be installed and available in `PATH`.
-- **Spotify API Compatibility:** Playback control endpoints (volume, skip, etc.) require explicit `Content-Length: 0` and `Content-Type: application/json` headers for empty-body PUT/POST requests.
 - **Security:** `list_directory` root access is restricted. The allowlist can be configured via `JARVIS_SKILLS_LIST_ALLOWED_ROOTS` (semicolon-separated).

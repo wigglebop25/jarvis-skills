@@ -9,6 +9,16 @@
       "tools": [
         "*"
       ]
+    },
+    "spotify": {
+      "type": "local",
+      "command": "node",
+      "args": [
+        "spotify-mcp-server/build/index.js"
+      ],
+      "tools": [
+        "*"
+      ]
     }
   }
 }
