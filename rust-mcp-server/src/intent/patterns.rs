@@ -58,21 +58,6 @@ impl IntentType {
                     ]
                 })
             }
-            Self::MusicControl => {
-                static RE: OnceLock<Vec<Regex>> = OnceLock::new();
-                RE.get_or_init(|| {
-                    vec![
-                        Regex::new(r"(?i)(play|pause|stop)\s*(music|song|track|spotify)?").unwrap(),
-                        Regex::new(r"(?i)(next|previous|skip)\s*(track|song)?").unwrap(),
-                        Regex::new(r"(?i)(spotify|music)\s*(play|pause|next|previous|skip)").unwrap(),
-                        Regex::new(r"(?i)what('s|s| is)?\s*(music|song|track)?\s*(is\s*)?playing").unwrap(),
-                        Regex::new(r"(?i)current\s*(track|song)").unwrap(),
-                        Regex::new(r"(?i)resume\s*(music|playback|spotify)?").unwrap(),
-                        Regex::new(r"(?i)(search|find)\s*(on\s*)?(spotify|music)").unwrap(),
-                        Regex::new(r"(?i)(add\s*to\s*queue|queue\s*up)").unwrap(),
-                    ]
-                })
-            }
             Self::NetworkToggle => {
                 static RE: OnceLock<Vec<Regex>> = OnceLock::new();
                 RE.get_or_init(|| {
@@ -134,23 +119,6 @@ impl IntentType {
                         ),
                         ("level", ParamExtractor::Regex(Regex::new(r"(?i)(\d+)\s*(%|percent)?").unwrap())),
                     ]
-                })
-            }
-            Self::MusicControl => {
-                static EX: OnceLock<Vec<(&'static str, ParamExtractor)>> = OnceLock::new();
-                EX.get_or_init(|| {
-                    vec![(
-                        "action",
-                        ParamExtractor::List(vec![
-                            (Regex::new(r"(?i)\b(play|resume)\b").unwrap(), "play"),
-                            (Regex::new(r"(?i)\b(pause|stop)\b").unwrap(), "pause"),
-                            (Regex::new(r"(?i)\b(next|skip)\b").unwrap(), "next"),
-                            (Regex::new(r"(?i)\bprevious\b").unwrap(), "previous"),
-                            (Regex::new(r"(?i)(what('s|s| is)?\s*(music|song|track)?\s*(is\s*)?playing|current\s*(track|song))").unwrap(), "current"),
-                            (Regex::new(r"(?i)\b(search|find)\b").unwrap(), "search"),
-                            (Regex::new(r"(?i)\b(queue|add)\b").unwrap(), "queue"),
-                        ]),
-                    )]
                 })
             }
             Self::NetworkToggle => {

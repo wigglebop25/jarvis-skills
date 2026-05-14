@@ -30,55 +30,6 @@ pub fn map_params_to_args(
                 }
             }
         }
-        IntentType::MusicControl => {
-            let mut final_tool = "playMusic".to_string();
-            let text = text_lower;
-            
-            // Priority check for information requests
-            if text.contains("queue") || text.contains("upcoming") {
-                if text.contains("add") {
-                    final_tool = "addToQueue".to_string();
-                    if let Some(m) = Regex::new(r"add\s+(.*?)\s+to").unwrap().captures(text) {
-                        final_args.insert("uri".to_string(), Value::String(m.get(1).unwrap().as_str().trim().to_string()));
-                    }
-                } else {
-                    final_tool = "getQueue".to_string();
-                }
-            } else if text.contains("playlist") {
-                final_tool = "getMyPlaylists".to_string();
-            } else if text.contains("playing") || text.contains("current track") {
-                final_tool = "getNowPlaying".to_string();
-            } else if let Some(action) = raw_params.get("action").and_then(|v| v.as_str()) {
-                match action {
-                    "pause" => final_tool = "pausePlayback".to_string(),
-                    "next" => final_tool = "skipToNext".to_string(),
-                    "previous" => final_tool = "skipToPrevious".to_string(),
-                    "current" => final_tool = "getNowPlaying".to_string(),
-                    "search" => final_tool = "searchSpotify".to_string(),
-                    "queue" => final_tool = "addToQueue".to_string(),
-                    _ => final_tool = "playMusic".to_string(),
-                }
-            }
-            
-            if final_tool == "searchSpotify" {
-                 if let Some(m) = Regex::new(r"(?:search|find)\s+(?:for\s+)?(?:the\s+)?(.*?)\s+on\s+spotify").unwrap().captures(text) {
-                     let query = m.get(1).unwrap().as_str().trim();
-                     final_args.insert("query".to_string(), Value::String(query.to_string()));
-                     let stype = if text.contains("album") { "album" } else if text.contains("artist") { "artist" } else { "track" };
-                     final_args.insert("type".to_string(), Value::String(stype.to_string()));
-                 }
-            }
-
-            final_args.remove("action");
-            let should_exec = confidence >= 0.85;
-            return RouteDecision {
-                intent: intent_type.as_str().to_string(),
-                confidence,
-                tool_name: Some(final_tool),
-                arguments: final_args,
-                should_execute: should_exec,
-            };
-        }
         IntentType::NetworkToggle => {
             if let Some(device) = raw_params.get("device").and_then(|v| v.as_str()) {
                 final_args.insert("interface".to_string(), Value::String(device.to_string()));
