@@ -51,7 +51,7 @@ pub async fn handle_jsonrpc(payload: &Value, state: &AppState, mode: RpcMode) ->
         "ping" => jsonrpc_success(id, json!({})),
         "tools/list" => match mode {
             RpcMode::HttpCompat => jsonrpc_success(id, json!({ "tools": tools::tool_definitions() })),
-            RpcMode::StdioMcp => jsonrpc_success(id, json!({ "tools": tools::mcp_tool_definitions() })),
+            RpcMode::StdioMcp => jsonrpc_success(id, json!({ "tools": tools::tool_definitions() })),
         },
         "tools/call" => {
             let name = params.get("name").and_then(Value::as_str);
