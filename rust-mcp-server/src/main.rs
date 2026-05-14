@@ -31,17 +31,8 @@ async fn main() {
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or(5050);
 
-    let client_id = env::var("SPOTIPY_CLIENT_ID").ok();
-    let client_secret = env::var("SPOTIPY_CLIENT_SECRET").ok();
-    let spotify = if let (Some(id), Some(secret)) = (client_id, client_secret) {
-        Some(std::sync::Arc::new(jarvis_rust_mcp_server::tools::spotify_api::SpotifyClient::new(id, secret.to_string())))
-    } else {
-        None
-    };
-
     let state = AppState {
         http: Client::new(),
-        spotify,
     };
 
     if stdio_mode {
@@ -92,7 +83,10 @@ async fn root_info() -> impl IntoResponse {
 }
 
 async fn list_tools_http() -> impl IntoResponse {
-    (StatusCode::OK, Json(json!({ "tools": tools::tool_definitions() })))
+    (
+        StatusCode::OK,
+        Json(json!({ "tools": tools::tool_definitions() })),
+    )
 }
 
 async fn jsonrpc(State(state): State<AppState>, Json(payload): Json<Value>) -> impl IntoResponse {
