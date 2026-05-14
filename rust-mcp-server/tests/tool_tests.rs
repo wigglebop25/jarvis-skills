@@ -15,7 +15,6 @@ use jarvis_rust_mcp_server::AppState;
 fn execute_tool(tool_name: &str, args: Map<String, Value>) -> Result<Value, String> {
     let state = AppState {
         http: reqwest::Client::new(),
-        spotify: None,
     };
     
     let rt = tokio::runtime::Runtime::new().expect("Failed to create runtime");
@@ -70,164 +69,20 @@ fn test_get_system_info_basic() {
 }
 
 // ============================================================================
-// Test 2: control_volume - Get current volume level
+// Test 6: tool catalog excludes Spotify
 // ============================================================================
 #[test]
-fn test_control_volume_get() {
-    let mut args = Map::new();
-    args.insert("action".to_string(), Value::String("get".to_string()));
-    
-    match execute_tool("control_volume", args) {
-        Ok(result) => {
-            // Verify response structure
-            assert!(result.is_object(), "Response should be a JSON object");
-            
-            let obj = result.as_object().unwrap();
-            
-            // Verify required fields
-            assert!(obj.contains_key("action"), "Response should contain action field");
-            assert_eq!(obj.get("action").unwrap().as_str().unwrap(), "get", 
-                      "Action should be 'get'");
-            
-            // Verify level field
-            assert!(obj.contains_key("level"), "Response should contain level field");
-            if let Some(level) = obj.get("level") {
-                assert!(level.is_number(), "Level should be a number");
-                let level_val = level.as_i64().unwrap();
-                assert!(level_val >= 0 && level_val <= 100, 
-                       "Volume level should be 0-100, got {}", level_val);
-            }
-        }
-        Err(e) => {
-            // Volume control may fail on some systems without proper utilities
-            // This is acceptable for MVP
-            eprintln!("Volume get test failed (expected on some systems): {}", e);
-        }
-    }
+fn test_tool_catalog_excludes_spotify() {
+    let names: Vec<String> = tools::tool_definitions()
+        .into_iter()
+        .filter_map(|tool| tool.get("function")?.get("name")?.as_str().map(str::to_string))
+        .collect();
+
+    assert!(names.iter().all(|name| !name.to_lowercase().contains("spotify")));
 }
 
 // ============================================================================
-// Test 3: control_volume - Set volume level
-// ============================================================================
-#[test]
-fn test_control_volume_set() {
-    let mut args = Map::new();
-    args.insert("action".to_string(), Value::String("set".to_string()));
-    args.insert("level".to_string(), json!(50));
-    
-    match execute_tool("control_volume", args) {
-        Ok(result) => {
-            // Verify response structure
-            assert!(result.is_object(), "Response should be a JSON object");
-            
-            let obj = result.as_object().unwrap();
-            
-            // Verify required fields
-            assert!(obj.contains_key("action"), "Response should contain action field");
-            assert_eq!(obj.get("action").unwrap().as_str().unwrap(), "set", 
-                      "Action should be 'set'");
-            
-            // Verify level field
-            assert!(obj.contains_key("level"), "Response should contain level field");
-            if let Some(level) = obj.get("level") {
-                assert!(level.is_number(), "Level should be a number");
-                assert_eq!(level.as_i64().unwrap(), 50, "Level should be 50");
-            }
-            
-            // Verify success flag
-            if let Some(success) = obj.get("success") {
-                assert!(success.is_boolean(), "Success should be a boolean");
-            }
-        }
-        Err(e) => {
-            // Volume control may fail on some systems without proper utilities
-            // This is acceptable for MVP
-            eprintln!("Volume set test failed (expected on some systems): {}", e);
-        }
-    }
-}
-
-// ============================================================================
-// Test 4: control_volume - Error handling for invalid action
-// ============================================================================
-#[test]
-fn test_control_volume_invalid_action() {
-    let mut args = Map::new();
-    args.insert("action".to_string(), Value::String("invalid_action".to_string()));
-    
-    match execute_tool("control_volume", args) {
-        Ok(_) => {
-            // Some implementations might handle this differently
-            // This is acceptable
-        }
-        Err(e) => {
-            // Expected to fail with invalid action
-            assert!(e.contains("action") || e.contains("Unsupported"), 
-                   "Error should mention invalid action: {}", e);
-        }
-    }
-}
-
-// ============================================================================
-// Test 5: control_volume - Error handling for missing action
-// ============================================================================
-#[test]
-fn test_control_volume_missing_action() {
-    let args = Map::new();
-    
-    // Should fail with missing required field
-    match execute_tool("control_volume", args) {
-        Ok(_) => panic!("Should fail with missing action"),
-        Err(e) => {
-            assert!(e.to_lowercase().contains("action") || e.to_lowercase().contains("required"),
-                   "Error should mention missing action: {}", e);
-        }
-    }
-}
-
-// ============================================================================
-// Test 6: playMusic - Basic functionality
-// ============================================================================
-#[test]
-fn test_play_music_basic() {
-    let mut args = Map::new();
-    args.insert("uri".to_string(), Value::String("spotify:track:4uLU61mZd93TjM59nuqyvY".to_string()));
-
-    match execute_tool("playMusic", args) {
-        Ok(result) => {
-            // Verify response structure
-            assert!(result.is_object(), "Response should be a JSON object");
-
-            let obj = result.as_object().unwrap();
-
-            // Verify action field
-            assert!(obj.contains_key("action"), "Response should contain action field");
-        }
-        Err(e) => {
-            // Spotify control may fail without proper auth/active device
-            eprintln!("Spotify test failed (expected on some systems): {}", e);
-        }
-    }
-}
-
-// ============================================================================
-// Test 7: playMusic - Error handling for missing parameters
-// ============================================================================
-#[test]
-fn test_play_music_missing_params() {
-    let args = Map::new();
-
-    // Should fail with missing required field (anyOf uri or type+id)
-    match execute_tool("playMusic", args) {
-        Ok(_) => panic!("Should fail with missing parameters"),
-        Err(e) => {
-            assert!(e.to_lowercase().contains("missing") || e.to_lowercase().contains("required") || e.to_lowercase().contains("uri"),
-                   "Error should mention missing parameters: {}", e);
-        }
-    }
-}
-// ============================================================================
-// Test 8: toggle_network - Verify parameter validation
+// Test 7: toggle_network - Verify parameter validation
 // ============================================================================
 #[test]
 fn test_toggle_network_check() {
@@ -254,7 +109,7 @@ fn test_toggle_network_check() {
 }
 
 // ============================================================================
-// Test 9: toggle_network - Valid interface parameters
+// Test 8: toggle_network - Valid interface parameters
 // ============================================================================
 #[test]
 fn test_toggle_network_valid_params() {
@@ -283,7 +138,7 @@ fn test_toggle_network_valid_params() {
 }
 
 // ============================================================================
-// Test 10: organize_folder - Dry run mode
+// Test 9: organize_folder - Dry run mode
 // ============================================================================
 #[test]
 fn test_organize_folder_dry_run() {
@@ -331,7 +186,7 @@ fn test_organize_folder_dry_run() {
 }
 
 // ============================================================================
-// Test 11: organize_folder - Invalid path handling
+// Test 10: organize_folder - Invalid path handling
 // ============================================================================
 #[test]
 fn test_organize_folder_invalid_path() {
@@ -350,7 +205,7 @@ fn test_organize_folder_invalid_path() {
 }
 
 // ============================================================================
-// Test 12: list_directory - Basic functionality
+// Test 11: list_directory - Basic functionality
 // ============================================================================
 #[test]
 fn test_list_directory() {
@@ -399,7 +254,7 @@ fn test_list_directory() {
 }
 
 // ============================================================================
-// Test 13: list_directory - Invalid path handling
+// Test 12: list_directory - Invalid path handling
 // ============================================================================
 #[test]
 fn test_list_directory_invalid_path() {
@@ -417,7 +272,7 @@ fn test_list_directory_invalid_path() {
 }
 
 // ============================================================================
-// Test 14: list_directory - Missing path parameter
+// Test 13: list_directory - Missing path parameter
 // ============================================================================
 #[test]
 fn test_list_directory_missing_path() {
@@ -434,7 +289,7 @@ fn test_list_directory_missing_path() {
 }
 
 // ============================================================================
-// Test 15: control_bluetooth_device - List devices
+// Test 14: control_bluetooth_device - List devices
 // ============================================================================
 #[test]
 fn test_control_bluetooth_device_list() {
@@ -480,7 +335,7 @@ fn test_control_bluetooth_device_list() {
 }
 
 // ============================================================================
-// Test 16: control_bluetooth_device - Error handling for missing action
+// Test 15: control_bluetooth_device - Error handling for missing action
 // ============================================================================
 #[test]
 fn test_control_bluetooth_device_missing_action() {
@@ -500,16 +355,14 @@ fn test_control_bluetooth_device_missing_action() {
 // Summary of test coverage:
 // ============================================================================
 // 
-// Tools tested (7):
+// Tools tested (5):
 // ✓ get_system_info - Basic system information retrieval
-// ✓ control_volume - Volume get/set operations with error handling
-// ✓ control_spotify - Media playback control
 // ✓ toggle_network - Network interface control with parameter validation
 // ✓ organize_folder - Folder organization with dry-run mode
 // ✓ list_directory - Directory listing with path validation
 // ✓ control_bluetooth_device - Bluetooth device management
 //
-// Total tests: 16
+// Total tests: 11
 //
 // Test patterns:
 // - Basic functionality tests (happy path)
@@ -523,4 +376,4 @@ fn test_control_bluetooth_device_missing_action() {
 // - Windows volume control uses native APIs (Core Audio), no external tools required.
 // - Tests verify response structure rather than exact values
 // - Error messages are checked for content validity
-// - All 7 tools have at least 2 tests each
+// - All 5 tools have at least 2 tests each
