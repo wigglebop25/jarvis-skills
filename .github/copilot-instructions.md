@@ -23,7 +23,6 @@
 
 ### 2. System & Hardware
 - **System Info**: `get_system_info` (CPU, RAM, storage, network stats).
-- **Audio**: `control_volume` (get, set, up, down, mute, unmute).
 - **Network**: `toggle_network` (wifi, bluetooth, ethernet).
 - **Bluetooth**: `control_bluetooth_device` (list, connect, disconnect).
 
